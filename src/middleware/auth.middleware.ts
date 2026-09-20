@@ -1,21 +1,20 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import jwt from "jsonwebtoken"
 const JWT_SECRET = "mySecretKey123";
-const authMiddleware = async(req : Request,res : Response,next : NextFunction) => {
-  try {
-       const authHeader = req.headers['authorization'];
-
+interface AuthUser {
+  userId : string,
+  email : string,
+}
+interface AuthRequest extends Request {
+  user?: AuthUser;
+}
+const authMiddleware = (req : Request,res : Response,next : NextFunction) => {
+       const authHeader = req.headers.authorization;
        if(!authHeader){
         return res.status(400).json({
           success: false,
           message : "AuthHeader is Missing.."
         })
-       }
-       if(typeof authHeader !== 'string'){
-           return res.status(400).json({
-            success : false,
-            message : "AuthHeader Must be a String."
-           })
        }
        const [type , token] = authHeader.split(' ');
        if(type !== 'Bearer' || !token){
@@ -24,14 +23,16 @@ const authMiddleware = async(req : Request,res : Response,next : NextFunction) =
           message : "Bearer Token Not Found.."
           })
        }
-
-       const decodedData = await jwt.verify(token,JWT_SECRET);
+       try{
+       const decodedData = jwt.verify(token,JWT_SECRET) as AuthUser;
        if(!decodedData){
         return res.status(400).json({
           success : false,
           message : "You're not logged in.."
         })
        }
+       req.user = decodedData;
+       console.log(req.user);
        next();
 
   }catch(err){
