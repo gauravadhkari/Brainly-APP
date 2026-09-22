@@ -5,9 +5,6 @@ interface AuthUser {
   userId : string,
   email : string,
 }
-interface AuthRequest extends Request {
-  user?: AuthUser;
-}
 const authMiddleware = (req : Request,res : Response,next : NextFunction) => {
        const authHeader = req.headers.authorization;
        if(!authHeader){
@@ -17,6 +14,7 @@ const authMiddleware = (req : Request,res : Response,next : NextFunction) => {
         })
        }
        const [type , token] = authHeader.split(' ');
+      
        if(type !== 'Bearer' || !token){
           return res.status(400).json({
           success : false,
@@ -35,8 +33,15 @@ const authMiddleware = (req : Request,res : Response,next : NextFunction) => {
        console.log(req.user);
        next();
 
-  }catch(err){
-    console.error("Some Error in Middleware",err);
+  }catch(error){
+     //Error Handling in TypeScript
+    if (error instanceof Error && (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError")){
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired token"
+      });
+    }
+    console.error("Some Error in Middleware", error);
     res.status(500).json({
       success : false,
       message : "Internal Server Error"
