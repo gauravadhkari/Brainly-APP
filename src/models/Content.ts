@@ -14,13 +14,15 @@ const ContentSchema = new Schema(
       type : String,
       required : true,
     },
-    tags : [{type : Types.ObjectId, ref : "Tag" }],
+    tags : [{type : Types.ObjectId , ref : "tag"}],
     userId : {
       type :  Types.ObjectId,
       ref : "User",
       required : true,
     },
-
+  },
+  {
+    timestamps : true,
   }
 )
 

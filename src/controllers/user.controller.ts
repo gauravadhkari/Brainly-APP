@@ -1,5 +1,3 @@
-import dotenv from 'dotenv';
-
 import type { Request, Response } from "express";
 import User from "../models/User.js";
 export const me = async (req : Request,res : Response) => {
