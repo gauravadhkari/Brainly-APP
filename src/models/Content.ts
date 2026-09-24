@@ -1,24 +1,32 @@
 import { Schema, model ,Types} from "mongoose";
 const contentTypes = ['image', 'video', 'article', 'audio'];
 const ContentSchema = new Schema(
-  {
-    link : {
+  { 
+     userId : {
+      type :  Types.ObjectId,
+      ref : "User",
+      required : true,
+    },
+     title : {
       type : String,
+      required : true,
+    },
+    description : {
+      type : String,
+      trim : true,
     },
     type : {
       type : String,
       enum : contentTypes,
       required : true,
     },
-    title : {
+    link : {
       type : String,
-      required : true,
+      trim : true,
     },
-    tags : [{type : Types.ObjectId , ref : "tag"}],
-    userId : {
-      type :  Types.ObjectId,
-      ref : "User",
-      required : true,
+    tags : {
+    type : [String],
+    default : [],
     },
   },
   {

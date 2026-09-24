@@ -9,12 +9,23 @@ const userSchema = new mongoose.Schema(
     },
     email : {
       type : String,
+      lowercase : true,
+      trim : true,
       unique : true,
       required : true,
     },
     password : {
       type : String,
       required : true,
+    },
+    sharingEnabled : {
+      type : Boolean,
+      default : false,
+    },
+    shareId : {
+      type : String,
+      unique : true,
+      default : null,
     }
   },
   {

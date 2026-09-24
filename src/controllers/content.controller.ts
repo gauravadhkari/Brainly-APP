@@ -1,7 +1,8 @@
 import type { Request, Response } from "express";
 import { Content } from "../models/Content.js";
 import { isValidObjectId } from "mongoose";
-
+import { generateRandomString } from "../utils.js";
+import User from "../models/User.js";
 
 export const createContent = async (req : Request, res : Response) => {
    try{
@@ -49,12 +50,63 @@ export const getContent = async (req : Request ,res : Response) => {
         message : "You're not logged In.."
       })
      }
-     const content = await Content.find({
-      userId : userId
-     });
+
+     const type = typeof req.query.type === "string" ? req.query.type.toLowerCase() : undefined;
+     const tag = typeof req.query.tag === "string" ? req.query.tag.toLowerCase().trim() : undefined;
+     const search = typeof req.query.search === "string" ? req.query.search.trim() : undefined;
+     const sort = typeof req.query.sort === "string" ? req.query.sort : "newest";
+
+     const page = Math.max(1, Number.parseInt(req.query.page as string) || 1);
+     const limit = Math.min(50, Math.max(1,Number.parseInt(req.query.limit as string) || 10));
+
+     const filter : Record<string,any> = {
+      userId,
+     }
+     if(type){
+      filter.type = type
+     }
+     if(tag){
+      filter.tags = tag
+     }
+     if(search){
+      filter.$or = [
+        {
+          title : {
+            $regex : search,
+            $options : "i",
+          }
+        },
+        {
+          description : {
+            $regex : search,
+            $options : "i",
+          }
+        },
+        {
+          tags : {
+            $regex : search,
+            $options : "i",
+          },
+        },
+      ];
+     }
+     const sortOption = sort === "oldest" ? { createdAt : 1 as const} : { createdAt : -1 as const};
+     const skip = (page - 1) * limit;
+     const totalItems = await Content.countDocuments(filter);
+     const content = await Content.find(filter)
+     .sort(sortOption)
+     .skip(skip)
+     .limit(limit);
+     const totalPages = Math.ceil(totalItems / limit);
      res.status(200).json({
       success : true,
       message : "Content Returned Successfully",
+      pagination : {
+        currentPage : page,
+        limit,
+        totalItems,
+        totalPages,
+      },
       content
      })
   }catch(e){
@@ -218,6 +270,89 @@ export const deleteAllContent = async(req : Request,res : Response) => {
      })
   }catch(e){
       console.error("Delete all content Error",e);
+      res.status(500).json({
+        success : false,
+        message : "Internal Server Error"
+      })
+  }
+}
+
+export const shareLink = async(req : Request,res : Response) => {
+  try{
+       const userId = req.user?.userId;
+       if(!userId){
+        return res.status(401).json({
+          success : false,
+          message : "Unauthorized Access.."
+        })
+       }
+       const user = await User.findOne({_id : userId});
+          if(!user){
+            return res.status(404).json({
+              success : false,
+              message : "User not found"
+            })
+          }
+       const shareEnabled = req.body.sharingEnabled;
+       if(shareEnabled === true){
+        const shareLink  = generateRandomString(10);
+        user.sharingEnabled = true;
+        user.shareId = shareLink;
+        await user.save(); 
+        return res.status(200).json({
+          success : true,
+          message : "Share link created Successfully",
+          Link : "http://localhost:8080/api/v1/contents/share/" + user.shareId,
+        });
+       }else{
+        user.sharingEnabled = false;
+        user.shareId = null;
+        await user.save();
+        return res.status(200).json({
+          success : true,
+          message : "Sharing Disabled Successfully"
+        })
+       }
+       
+  }catch(e){
+      
+    res.status(500).json({
+      message : "Internal Server Error",
+    })
+  }
+}
+
+export const sharedContent = async(req : Request,res : Response) => {
+  try{
+     const shareId = req.params.sharedId;
+     if(!shareId){
+      return res.status(400).json({
+        message : "Not a share id"
+      })
+     }
+     const user = await User.findOne({
+      shareId,
+      sharingEnabled : true,
+    });
+     if(!user){
+      return res.status(404).json({
+        message : "Not a valid id"
+      })
+     }
+     const content = await Content.find({userId : user._id});
+     if(content.length === 0){
+      return res.status(200).json({
+        success : true,
+        message : "No Content..",
+        content
+      })
+     }
+     res.status(200).json({
+      success : true,
+      message : "Shared Content Returned",
+      content
+     })
+  }catch(e){
       res.status(500).json({
         success : false,
         message : "Internal Server Error"
