@@ -1,6 +1,6 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import User from "../models/User.js";
-export const me = async (req : Request,res : Response) => {
+export const me = async (req : Request,res : Response,next : NextFunction) => {
   try{
      const id = req.user?.userId;
      if(!id){
@@ -26,9 +26,6 @@ export const me = async (req : Request,res : Response) => {
      })
   }catch(e){
     console.log("User End Error:",e);
-    res.status(500).json({
-      success : false,
-      message : "Internal Server Error"
-    })
+    next(e);
   }
 }

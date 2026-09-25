@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { Content } from "../models/Content.js";
 import { isValidObjectId , Types } from "mongoose";
 import { generateRandomString } from "../utils.js";
@@ -6,7 +6,7 @@ import User from "../models/User.js";
 import { z } from "zod";
 import { contentSchema, updateContentSchema } from "../validations/content.validation.js";
 
-export const createContent = async (req : Request, res : Response) => {
+export const createContent = async (req : Request, res : Response, next : NextFunction) => {
    try{
        const result = contentSchema.safeParse(req.body);
        if(!result.success){
@@ -48,14 +48,11 @@ export const createContent = async (req : Request, res : Response) => {
    }catch(e){
       console.error("Content Adding Error:",e);
 
-      res.status(500).json({
-        success : false,
-        message : "Internal Server Error.."
-      });
+      next(e);
    }
 }
 
-export const getContent = async (req : Request ,res : Response) => {
+export const getContent = async (req : Request ,res : Response,next : NextFunction) => {
   try{
      const userId = req.user?.userId;
      if(!userId){
@@ -125,14 +122,11 @@ export const getContent = async (req : Request ,res : Response) => {
      })
   }catch(e){
      console.error("Get Content Error:",e);
-     res.status(500).json({
-      success : false,
-      message : "Internal Server Error"
-     })
+     next(e);
   }
 }
 
-export const getContentById = async(req : Request,res : Response) => {
+export const getContentById = async(req : Request,res : Response, next : NextFunction) => {
   try{
      const userId = req.user?.userId;
      if(!userId){
@@ -165,14 +159,11 @@ export const getContentById = async(req : Request,res : Response) => {
      })
   }catch(e){
       console.error("Get content by id Error:",e);
-      res.status(500).json({
-        success : false,
-        message : "Internal Server Error"
-      })
+      next(e);
   }
 }
 
-export const updateContent = async(req : Request,res : Response) => {
+export const updateContent = async(req : Request,res : Response,next : NextFunction) => {
   try{
     const result = updateContentSchema.safeParse(req.body);
     if(!result.success){
@@ -223,14 +214,11 @@ export const updateContent = async(req : Request,res : Response) => {
   }catch(e){
     console.error("Update content error",e);
 
-    res.status(500).json({
-      success : false,
-      message : "Internal server Error",
-    })
+    next(e);
   }
 }
 
-export const deleteContent = async(req : Request,res : Response) => {
+export const deleteContent = async(req : Request,res : Response,next : NextFunction) => {
   try {
     const contentId = req.params.id;
     if(!isValidObjectId(contentId)){
@@ -263,14 +251,11 @@ export const deleteContent = async(req : Request,res : Response) => {
   }catch(e){
     console.error("Delete Content Error:",e);
 
-    res.status(500).json({
-      success : false,
-      message : "Internal Server Error"
-    })
+   next(e);
   }
 }
 
-export const deleteAllContent = async(req : Request,res : Response) => {
+export const deleteAllContent = async(req : Request,res : Response, next : NextFunction) => {
   try {
      const userId = req.user?.userId;
      if(!userId){
@@ -295,14 +280,11 @@ export const deleteAllContent = async(req : Request,res : Response) => {
      })
   }catch(e){
       console.error("Delete all content Error",e);
-      res.status(500).json({
-        success : false,
-        message : "Internal Server Error"
-      })
+      next(e);
   }
 }
 
-export const shareLink = async(req : Request,res : Response) => {
+export const shareLink = async(req : Request,res : Response, next : NextFunction) => {
   try{
        const userId = req.user?.userId;
        if(!userId){
@@ -341,13 +323,11 @@ export const shareLink = async(req : Request,res : Response) => {
        
   }catch(e){
       
-    res.status(500).json({
-      message : "Internal Server Error",
-    })
+    next(e);
   }
 }
 
-export const sharedContent = async(req : Request,res : Response) => {
+export const sharedContent = async(req : Request,res : Response,next : NextFunction) => {
   try{
      const shareId = req.params.sharedId;
      if(!shareId){
@@ -378,9 +358,6 @@ export const sharedContent = async(req : Request,res : Response) => {
       content
      })
   }catch(e){
-      res.status(500).json({
-        success : false,
-        message : "Internal Server Error"
-      })
+      next(e);
   }
 }
