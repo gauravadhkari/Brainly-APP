@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema(
       type : String,
       unique : true,
       required : true,
+      minimum : 15,
     },
     email : {
       type : String,
@@ -25,7 +26,7 @@ const userSchema = new mongoose.Schema(
     shareId : {
       type : String,
       unique : true,
-      default : null,
+      sparse : true,
     }
   },
   {

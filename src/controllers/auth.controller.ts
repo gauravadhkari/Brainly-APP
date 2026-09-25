@@ -1,17 +1,27 @@
 import dotenv from 'dotenv';
 
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
+import { loginSchema, signupSchema } from '../validations/auth.validation.js';
+import z from 'zod';
 dotenv.config();
 const JWT_SECRET_KEY = process.env.JWT_SECRET;
 if (!JWT_SECRET_KEY) {
   throw new Error("JWT_SECRET is not configured");
 }
-export const signup = async (req : Request,res : Response) => {
+export const signup = async (req : Request,res : Response, next : NextFunction) => {
   try{
-  const {username, email, password} = req.body;
+    const result = signupSchema.safeParse(req.body);
+    if(!result.success){
+      return res.status(400).json({
+        success : false,
+        message : "Validation failed!",
+        errors: z.flattenError(result.error).fieldErrors
+      })
+    }
+  const {username, email, password} = result.data;
   if(!username || !email || !password){
     return res.status(411).json({
       success : false,
@@ -20,7 +30,7 @@ export const signup = async (req : Request,res : Response) => {
   }
   const isExisting = await User.findOne({email});
   if(isExisting){
-    return res.status(201).json({
+    return res.status(409).json({
       success : false,
       message : "User Already Exist.."
     })
@@ -31,21 +41,26 @@ export const signup = async (req : Request,res : Response) => {
     email,
     password:hashedPassword,
   });
-  res.status(200).json({
+  res.status(201).json({
     success : true,
     message : "User Created Successfully..",
   })
-}catch(e){
-  console.log("SIGNUP Error :",e);
-  res.status(500).json({
-    success : false,
-    message : "Internal Server Error..."
-  })
+}catch(error){
+  console.log("SIGNUP Error :",error);
+  next(error);
 }
 }
-export const signin =  async (req : Request,res : Response) => {
+export const signin =  async (req : Request,res : Response, next : NextFunction) => {
   try{
-  const {username , password} = req.body;
+    const result = loginSchema.safeParse(req.body);
+    if(!result.success){
+      return res.status(400).json({
+        success : false,
+        message : "Validation failed",
+        errors: z.flattenError(result.error).fieldErrors
+      })
+    }
+  const {username , password} = result.data;
 
   if(!username || !password){
     return res.status(411).json({
@@ -55,16 +70,16 @@ export const signin =  async (req : Request,res : Response) => {
   }
    const user = await User.findOne({
     username
-  }).populate("username email");
+  });
     if(!user){
-    return res.status(403).json({
+    return res.status(404).json({
       success : false,
       message : "User not exists.."
     })
   }
   const isPasswordMatch = await bcrypt.compare(password,user.password);
   if(!isPasswordMatch){
-    return res.status(400).json({
+    return res.status(401).json({
       success : false,
       message : "Wrong Password!"
     })
@@ -77,10 +92,7 @@ export const signin =  async (req : Request,res : Response) => {
   });
 }catch(e){
   console.log("SIGNIN Error:",e);
-  res.status(500).json({
-    success : false,
-    message : "Internal Server Error.."
-  })
+  next(e);
 }
 }
 

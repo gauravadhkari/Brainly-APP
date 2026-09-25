@@ -1,11 +1,17 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express, { type NextFunction, type Request, type Response } from "express";
 import jwt from "jsonwebtoken"
-const JWT_SECRET = "mySecretKey123";
+const JWT_SECRET = process.env.JWT_SECRET;
+if(!JWT_SECRET){
+  throw new Error("JWT_SECRET not configured!")
+}
 interface AuthUser {
   userId : string,
   email : string,
 }
 const authMiddleware = (req : Request,res : Response,next : NextFunction) => {
+      
        const authHeader = req.headers.authorization;
        if(!authHeader){
         return res.status(400).json({

@@ -1,0 +1,868 @@
+
+================================================================================
+FILE: app.ts
+================================================================================
+
+import express from "express";
+// cors does not currently provide TypeScript declarations in this project.
+// @ts-expect-error Missing declaration file for module "cors".
+import cors from "cors";
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js"
+import contentRoutes from "./routes/content.routes.js"
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/auth",userRoutes);
+app.use("/api/v1",contentRoutes);
+app.get("/health" , (req,res) => {
+  message : "API is working Fine..."
+})
+export default app;
+
+================================================================================
+FILE: server.ts
+================================================================================
+
+import dotenv from 'dotenv';
+dotenv.config();
+
+import mongoose from "mongoose";
+import app from "./app.js"
+
+
+const PORT = Number(process.env.PORT);
+
+const startServer = async ()=>{
+  await mongoose.connect(`${process.env.MONGO_URI}`);
+  console.log("Database Connected");
+  app.listen(PORT, () => {
+    console.log(`Server is running on PORT : ${PORT}`);
+  })
+}
+startServer();
+
+================================================================================
+FILE: utils.ts
+================================================================================
+
+export function generateRandomString(length: number): string {
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+  let result = "";
+
+  for (let i = 0; i < length; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return result;
+}
+
+================================================================================
+FILE: controllers\auth.controller.ts
+================================================================================
+
+import dotenv from 'dotenv';
+
+import type { Request, Response } from "express";
+import bcrypt from "bcrypt";
+import User from "../models/User.js";
+import jwt from "jsonwebtoken";
+import { loginSchema, signupSchema } from '../validations/auth.validation.js';
+dotenv.config();
+const JWT_SECRET_KEY = process.env.JWT_SECRET;
+if (!JWT_SECRET_KEY) {
+  throw new Error("JWT_SECRET is not configured");
+}
+export const signup = async (req : Request,res : Response) => {
+  try{
+    const result = signupSchema.safeParse(req.body);
+    if(!result.success){
+      return res.status(400).json({
+        success : false,
+        message : "Validation failed!",
+        errors: result.error.flatten().fieldErrors
+      })
+    }
+  const {username, email, password} = result.data;
+  if(!username || !email || !password){
+    return res.status(411).json({
+      success : false,
+      message : "All fields are required.."
+    })
+  }
+  const isExisting = await User.findOne({email});
+  if(isExisting){
+    return res.status(201).json({
+      success : false,
+      message : "User Already Exist.."
+    })
+  }
+  const hashedPassword = await bcrypt.hash(password,5);
+  await User.create({
+    username,
+    email,
+    password:hashedPassword,
+  });
+  res.status(200).json({
+    success : true,
+    message : "User Created Successfully..",
+  })
+}catch(e){
+  console.log("SIGNUP Error :",e);
+  res.status(500).json({
+    success : false,
+    message : "Internal Server Error..."
+  })
+}
+}
+export const signin =  async (req : Request,res : Response) => {
+  try{
+    const result = loginSchema.safeParse(req.body);
+    if(!result.success){
+      return res.status(400).json({
+        success : false,
+        message : "Validation failed",
+        errors: result.error.flatten().fieldErrors
+      })
+    }
+  const {username , password} = result.data;
+
+  if(!username || !password){
+    return res.status(411).json({
+      success : "false",
+      message : "Both Feilds required.."
+    })
+  }
+   const user = await User.findOne({
+    username
+  }).populate("username email");
+    if(!user){
+    return res.status(403).json({
+      success : false,
+      message : "User not exists.."
+    })
+  }
+  const isPasswordMatch = await bcrypt.compare(password,user.password);
+  if(!isPasswordMatch){
+    return res.status(400).json({
+      success : false,
+      message : "Wrong Password!"
+    })
+  }
+  const token = jwt.sign({userId : user._id,email :user.email},JWT_SECRET_KEY);
+  res.status(200).json({
+    success : true,
+    message : "You are logged in..",
+    token
+  });
+}catch(e){
+  console.log("SIGNIN Error:",e);
+  res.status(500).json({
+    success : false,
+    message : "Internal Server Error.."
+  })
+}
+}
+
+
+
+================================================================================
+FILE: controllers\content.controller.ts
+================================================================================
+
+import type { Request, Response } from "express";
+import { Content } from "../models/Content.js";
+import { isValidObjectId } from "mongoose";
+import { generateRandomString } from "../utils.js";
+import User from "../models/User.js";
+import { contentSchema } from "../validations/content.validation.js";
+
+export const createContent = async (req : Request, res : Response) => {
+   try{
+       const result = contentSchema.safeParse(req.body);
+       if(!result.success){
+        return res.status(400).json({
+          success : false,
+          message : "Validation Failed!"
+        })
+       }
+       const {link , title, type , tags} = result.data;
+       if(!link || !title || !type ){
+          return res.status(400).json({
+            success : false,
+            message : "All fields are required.."
+          });
+       }
+       const userId = req.user?.userId;
+       if(!userId){
+        return res.status(401).json({
+          success : false,
+          message : "You're not logged in.."
+        })
+       }
+       await Content.create({
+        link,
+        type,
+        title,
+          ...(tags !== undefined ? { tags } : {}),
+        userId : userId,
+       });
+       res.status(201).json({
+        success : true,
+        message : "Content created Successfully.."
+       });
+   }catch(e){
+      console.error("Content Adding Error:",e);
+
+      res.status(500).json({
+        success : false,
+        message : "Internal Server Error.."
+      });
+   }
+}
+
+export const getContent = async (req : Request ,res : Response) => {
+  try{
+     const userId = req.user?.userId;
+     if(!userId){
+      return res.status(401).json({
+        success : false,
+        message : "You're not logged In.."
+      })
+     }
+
+     const type = typeof req.query.type === "string" ? req.query.type.toLowerCase() : undefined;
+     const tag = typeof req.query.tag === "string" ? req.query.tag.toLowerCase().trim() : undefined;
+     const search = typeof req.query.search === "string" ? req.query.search.trim() : undefined;
+     const sort = typeof req.query.sort === "string" ? req.query.sort : "newest";
+
+     const page = Math.max(1, Number.parseInt(req.query.page as string) || 1);
+     const limit = Math.min(50, Math.max(1,Number.parseInt(req.query.limit as string) || 10));
+
+     const filter : Record<string,any> = {
+      userId,
+     }
+     if(type){
+      filter.type = type
+     }
+     if(tag){
+      filter.tags = tag
+     }
+     if(search){
+      filter.$or = [
+        {
+          title : {
+            $regex : search,
+            $options : "i",
+          }
+        },
+        {
+          description : {
+            $regex : search,
+            $options : "i",
+          }
+        },
+        {
+          tags : {
+            $regex : search,
+            $options : "i",
+          },
+        },
+      ];
+     }
+     const sortOption = sort === "oldest" ? { createdAt : 1 as const} : { createdAt : -1 as const};
+     const skip = (page - 1) * limit;
+     const totalItems = await Content.countDocuments(filter);
+     const content = await Content.find(filter)
+     .sort(sortOption)
+     .skip(skip)
+     .limit(limit);
+     const totalPages = Math.ceil(totalItems / limit);
+     res.status(200).json({
+      success : true,
+      message : "Content Returned Successfully",
+      pagination : {
+        currentPage : page,
+        limit,
+        totalItems,
+        totalPages,
+      },
+      content
+     })
+  }catch(e){
+     console.error("Get Content Error:",e);
+     res.status(500).json({
+      success : false,
+      message : "Internal Server Error"
+     })
+  }
+}
+
+export const getContentById = async(req : Request,res : Response) => {
+  try{
+     const userId = req.user?.userId;
+     if(!userId){
+      return res.status(401).json({
+        success : false,
+        message : "You're not logged in"
+      })
+     }
+     const contentId = req.params.id;
+     if(!isValidObjectId(contentId)){
+      return res.status(400).json({
+        success : false,
+        message : "Not a valid object Id.."
+      })
+     }
+     const content = await Content.findOne({
+      _id : contentId,
+      userId : userId
+     }).populate("userId");
+     if(!content){
+      return res.status(404).json({
+        success : false,
+        message : "Content is no more in db"
+      })
+     }
+     res.status(200).json({
+      success : true,
+      message : "Content found Successfully",
+      content
+     })
+  }catch(e){
+      console.error("Get content by id Error:",e);
+      res.status(500).json({
+        success : false,
+        message : "Internal Server Error"
+      })
+  }
+}
+
+export const updateContent = async(req : Request,res : Response) => {
+  try{
+    const result = contentSchema.safeParse(req.body);
+    if(!result.success){
+      return res.status(400).json({
+        success : false,
+        message : "Validation Failed!"
+      })
+    }
+     const {link , title, type} = result.data;
+     const userId = req.user?.userId;
+     if(!userId){
+      return res.status(401).json({
+        success : false,
+        message : "You're not logged in"
+      })
+     }
+     const contentId = req.params.id;
+     if(!isValidObjectId(contentId)){
+       return res.status(400).json({
+        success : false,
+        message : "Not a valid object Id",
+       })
+     }
+     const content = await Content.findOne({
+      _id : contentId,
+      userId : userId,
+     });
+     if(!content){
+      return res.status(404).json({
+        success : false,
+        message : "Content not found in db"
+      })
+     }
+     content.link = link || content.link;
+     content.title = title || content.title;
+     content.type = type || content.type;
+     await content.save()
+
+     res.status(200).json({
+      success : true,
+      message : "Content Updated Successfully",
+      content
+     })
+  }catch(e){
+    console.error("Update content error",e);
+
+    res.status(500).json({
+      success : false,
+      message : "Internal server Error",
+    })
+  }
+}
+
+export const deleteContent = async(req : Request,res : Response) => {
+  try {
+    const contentId = req.params.id;
+    if(!isValidObjectId(contentId)){
+      return res.status(400).json({
+        success : false,
+        message : "Not a Valid Content Id"
+      })
+    }
+    const userId = req.user?.userId;
+    if(!userId){
+      return res.status(401).json({
+        success : false,
+        message : "You're not logged in."
+      })
+    }
+    const content = await Content.findOneAndDelete({
+      _id : contentId,
+      userId : userId
+    })
+    if(!content){
+      return res.status(404).json({
+        success : false,
+        message : "Content Not found in db"
+      })
+    }
+    res.status(200).json({
+      success : true,
+      message : "Content Deleted Successfully"
+    })
+  }catch(e){
+    console.error("Delete Content Error:",e);
+
+    res.status(500).json({
+      success : false,
+      message : "Internal Server Error"
+    })
+  }
+}
+
+export const deleteAllContent = async(req : Request,res : Response) => {
+  try {
+     const userId = req.user?.userId;
+     if(!userId){
+      return res.status(401).json({
+        success : false,
+        message : "You're not logged in."
+      })
+     }
+     const delContent = await Content.deleteMany({
+      userId : userId
+     });
+     if(delContent.deletedCount === 0){
+      return res.status(404).json({
+        success : false,
+        message : "Not Any Content"
+      })
+     }
+     res.status(200).json({
+      success : true,
+      message : "All content deleted successfully..",
+      delContent
+     })
+  }catch(e){
+      console.error("Delete all content Error",e);
+      res.status(500).json({
+        success : false,
+        message : "Internal Server Error"
+      })
+  }
+}
+
+export const shareLink = async(req : Request,res : Response) => {
+  try{
+       const userId = req.user?.userId;
+       if(!userId){
+        return res.status(401).json({
+          success : false,
+          message : "Unauthorized Access.."
+        })
+       }
+       const user = await User.findOne({_id : userId});
+          if(!user){
+            return res.status(404).json({
+              success : false,
+              message : "User not found"
+            })
+          }
+       const shareEnabled = req.body.sharingEnabled;
+       if(shareEnabled === true){
+        const shareLink  = generateRandomString(10);
+        user.sharingEnabled = true;
+        user.shareId = shareLink;
+        await user.save(); 
+        return res.status(200).json({
+          success : true,
+          message : "Share link created Successfully",
+          Link : "http://localhost:8080/api/v1/contents/share/" + user.shareId,
+        });
+       }else{
+        user.sharingEnabled = false;
+        user.shareId = null;
+        await user.save();
+        return res.status(200).json({
+          success : true,
+          message : "Sharing Disabled Successfully"
+        })
+       }
+       
+  }catch(e){
+      
+    res.status(500).json({
+      message : "Internal Server Error",
+    })
+  }
+}
+
+export const sharedContent = async(req : Request,res : Response) => {
+  try{
+     const shareId = req.params.sharedId;
+     if(!shareId){
+      return res.status(400).json({
+        message : "Not a share id"
+      })
+     }
+     const user = await User.findOne({
+      shareId,
+      sharingEnabled : true,
+    });
+     if(!user){
+      return res.status(404).json({
+        message : "Not a valid id"
+      })
+     }
+     const content = await Content.find({userId : user._id});
+     if(content.length === 0){
+      return res.status(200).json({
+        success : true,
+        message : "No Content..",
+        content
+      })
+     }
+     res.status(200).json({
+      success : true,
+      message : "Shared Content Returned",
+      content
+     })
+  }catch(e){
+      res.status(500).json({
+        success : false,
+        message : "Internal Server Error"
+      })
+  }
+}
+
+================================================================================
+FILE: controllers\user.controller.ts
+================================================================================
+
+import type { Request, Response } from "express";
+import User from "../models/User.js";
+export const me = async (req : Request,res : Response) => {
+  try{
+     const id = req.user?.userId;
+     if(!id){
+      return res.status(411).json({
+        success : false,
+        message : "You're not logged In.."
+      })
+     }
+     const user = await User.findById(id);
+     if(!user){
+      return res.status(411).json({
+        success : false,
+        message : "User not found.."
+      })
+     }
+     res.status(200).json({
+      success : true,
+      message : "User Data Returned Successfully",
+      userDetail : {
+      username : user.username,
+      email : user.email
+      },
+     })
+  }catch(e){
+    console.log("User End Error:",e);
+    res.status(500).json({
+      success : false,
+      message : "Internal Server Error"
+    })
+  }
+}
+
+================================================================================
+FILE: middleware\auth.middleware.ts
+================================================================================
+
+import express, { type NextFunction, type Request, type Response } from "express";
+import jwt from "jsonwebtoken"
+const JWT_SECRET = "mySecretKey123";
+interface AuthUser {
+  userId : string,
+  email : string,
+}
+const authMiddleware = (req : Request,res : Response,next : NextFunction) => {
+       const authHeader = req.headers.authorization;
+       if(!authHeader){
+        return res.status(400).json({
+          success: false,
+          message : "AuthHeader is Missing.."
+        })
+       }
+       const [type , token] = authHeader.split(' ');
+      
+       if(type !== 'Bearer' || !token){
+          return res.status(400).json({
+          success : false,
+          message : "Bearer Token Not Found.."
+          })
+       }
+       try{
+       const decodedData = jwt.verify(token,JWT_SECRET) as AuthUser;
+       if(!decodedData){
+        return res.status(400).json({
+          success : false,
+          message : "You're not logged in.."
+        })
+       }
+       req.user = decodedData;
+       console.log(req.user);
+       next();
+
+  }catch(error){
+     //Error Handling in TypeScript
+    if (error instanceof Error && (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError")){
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired token"
+      });
+    }
+    console.error("Some Error in Middleware", error);
+    res.status(500).json({
+      success : false,
+      message : "Internal Server Error"
+    })
+  }
+}
+
+export default authMiddleware;
+
+================================================================================
+FILE: models\Content.ts
+================================================================================
+
+import { Schema, model ,Types} from "mongoose";
+const contentTypes = ['image', 'video', 'article', 'audio'];
+const ContentSchema = new Schema(
+  { 
+     userId : {
+      type :  Types.ObjectId,
+      ref : "User",
+      required : true,
+    },
+     title : {
+      type : String,
+      required : true,
+    },
+    description : {
+      type : String,
+      trim : true,
+    },
+    type : {
+      type : String,
+      enum : contentTypes,
+      required : true,
+    },
+    link : {
+      type : String,
+      trim : true,
+    },
+    tags : {
+    type : [String],
+    default : [],
+    },
+  },
+  {
+    timestamps : true,
+  }
+)
+
+export const Content = model("Content",ContentSchema);
+
+================================================================================
+FILE: models\User.ts
+================================================================================
+
+import mongoose from 'mongoose';
+
+const userSchema = new mongoose.Schema(
+  {
+    username :{
+      type : String,
+      unique : true,
+      required : true,
+      minimum : 15,
+    },
+    email : {
+      type : String,
+      lowercase : true,
+      trim : true,
+      unique : true,
+      required : true,
+    },
+    password : {
+      type : String,
+      required : true,
+    },
+    sharingEnabled : {
+      type : Boolean,
+      default : false,
+    },
+    shareId : {
+      type : String,
+      unique : true,
+      default : null,
+    }
+  },
+  {
+    timestamps : true,
+  }
+);
+
+const User = mongoose.model('User', userSchema);
+
+export default User;
+
+================================================================================
+FILE: routes\auth.routes.ts
+================================================================================
+
+import express from "express";
+
+const router = express.Router();
+
+import { signup, signin } from "../controllers/auth.controller.js";
+import { me } from "../controllers/user.controller.js";
+import authMiddleware from "../middleware/auth.middleware.js";
+router.post("/signup", signup);
+router.post("/signin", signin);
+router.get("/me",authMiddleware,me);
+export default router;
+
+================================================================================
+FILE: routes\content.routes.ts
+================================================================================
+
+import express from "express";
+
+const router = express.Router();
+
+import { createContent, deleteAllContent, deleteContent, getContent, getContentById, sharedContent, shareLink, updateContent } from "../controllers/content.controller.js";
+import authMiddleware from "../middleware/auth.middleware.js";
+
+router.post("/content",authMiddleware,createContent);
+router.get("/content",authMiddleware,getContent);
+router.get("/content/:id",authMiddleware,getContentById);
+router.put("/content/:id",authMiddleware,updateContent);
+router.delete("/content/:id",authMiddleware,deleteContent);
+router.delete("/contents/deleteAll",authMiddleware,deleteAllContent);
+router.post("/contents/share",authMiddleware,shareLink);
+router.get("/contents/share/:sharedId",authMiddleware,sharedContent);
+export default router;
+
+================================================================================
+FILE: routes\user.routes.ts
+================================================================================
+
+import express from "express";
+
+const router = express.Router();
+
+import { me } from "../controllers/user.controller.js";
+import authMiddleware from "../middleware/auth.middleware.js";
+router.get("/me",authMiddleware,me);
+export default router;
+
+================================================================================
+FILE: types\express.d.ts
+================================================================================
+
+export {};
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId: string;
+        email: string;
+      };
+    }
+  }
+}
+
+================================================================================
+FILE: validations\auth.validation.ts
+================================================================================
+
+import { z } from "zod";
+
+export const signupSchema = z.object({
+  username : z
+  .string()
+  .min(2, "Name must be at least 2 characters long")
+  .max(50, "Name is too long"),
+
+  email : z
+  .string()
+  .email("Invalid email"),
+
+  password : z
+  .string()
+  .min(6, "Password must be at least 6 characters")
+})
+
+export const loginSchema = z.object({
+  username : z
+  .string()
+  .min(2, "Name must be at least 2 characters long")
+  .max(50,"Name is too long"),
+
+  password : z
+  .string()
+  .min(1,"Password is required")
+})
+
+================================================================================
+FILE: validations\content.validation.ts
+================================================================================
+
+import { z } from "zod";
+
+export const contentSchema = z.object({
+   title: z
+    .string()
+    .min(1, "Title is required")
+    .max(200, "Title is too long"),
+
+  description: z
+    .string()
+    .max(5000, "Description is too long")
+    .optional(),
+
+  link: z
+    .string()
+    .url("Invalid URL"),
+
+  type: z.enum([
+    "note",
+    "youtube",
+    "twitter",
+    "article",
+    "document",
+    "link"
+  ]),
+
+  tags: z
+    .array(z.string())
+})

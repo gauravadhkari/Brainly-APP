@@ -12,5 +12,5 @@ router.put("/content/:id",authMiddleware,updateContent);
 router.delete("/content/:id",authMiddleware,deleteContent);
 router.delete("/contents/deleteAll",authMiddleware,deleteAllContent);
 router.post("/contents/share",authMiddleware,shareLink);
-router.get("/contents/share/:sharedId",authMiddleware,sharedContent);
+router.get("/contents/share/:sharedId",sharedContent);
 export default router;

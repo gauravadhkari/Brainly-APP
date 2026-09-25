@@ -1,12 +1,22 @@
 import type { Request, Response } from "express";
 import { Content } from "../models/Content.js";
-import { isValidObjectId } from "mongoose";
+import { isValidObjectId , Types } from "mongoose";
 import { generateRandomString } from "../utils.js";
 import User from "../models/User.js";
+import { z } from "zod";
+import { contentSchema, updateContentSchema } from "../validations/content.validation.js";
 
 export const createContent = async (req : Request, res : Response) => {
    try{
-       const {link , title, type , tags} = req.body;
+       const result = contentSchema.safeParse(req.body);
+       if(!result.success){
+        return res.status(400).json({
+          success : false,
+          message : "Validation Failed!",
+          errors: z.flattenError(result.error).fieldErrors
+        })
+       }
+       const {link , title, type , tags , description} = result.data;
        if(!link || !title || !type ){
           return res.status(400).json({
             success : false,
@@ -20,12 +30,16 @@ export const createContent = async (req : Request, res : Response) => {
           message : "You're not logged in.."
         })
        }
+       const normalizedTags = tags?.map(tag => 
+        tag.toLowerCase().trim()
+       );
        await Content.create({
         link,
         type,
         title,
-        tags,
-        userId : userId,
+        tags : normalizedTags,
+         ...(description !== undefined ? { description } : {}),
+        userId : new Types.ObjectId(userId),
        });
        res.status(201).json({
         success : true,
@@ -137,7 +151,7 @@ export const getContentById = async(req : Request,res : Response) => {
      const content = await Content.findOne({
       _id : contentId,
       userId : userId
-     }).populate("userId");
+     });
      if(!content){
       return res.status(404).json({
         success : false,
@@ -160,7 +174,15 @@ export const getContentById = async(req : Request,res : Response) => {
 
 export const updateContent = async(req : Request,res : Response) => {
   try{
-     const {link , title, type} = req.body;
+    const result = updateContentSchema.safeParse(req.body);
+    if(!result.success){
+      return res.status(400).json({
+        success : false,
+        message : "Validation Failed!",
+        errors: z.flattenError(result.error).fieldErrors
+      })
+    }
+     const {link , title, type, tags,description} = result.data;
      const userId = req.user?.userId;
      if(!userId){
       return res.status(401).json({
@@ -185,9 +207,12 @@ export const updateContent = async(req : Request,res : Response) => {
         message : "Content not found in db"
       })
      }
-     content.link = link || content.link;
-     content.title = title || content.title;
-     content.type = type || content.type;
+     if (link !== undefined) content.link = link;
+     if (title !== undefined) content.title = title;
+     if (type !== undefined) content.type = type;
+     if (description !== undefined) content.description = description;
+     if (tags !== undefined) content.tags = tags;
+
      await content.save()
 
      res.status(200).json({
