@@ -302,6 +302,16 @@ export const shareLink = async(req : Request,res : Response, next : NextFunction
           }
        const shareEnabled = req.body.sharingEnabled;
        if(shareEnabled === true){
+        if (
+        user.sharingEnabled &&
+        user.shareId
+      ) {
+        return res.status(200).json({
+          success: true,
+          message: "Sharing is already enabled",
+          shareId : user.shareId,
+        });
+      }
         const shareLink  = generateRandomString(10);
         user.sharingEnabled = true;
         user.shareId = shareLink;
@@ -309,12 +319,14 @@ export const shareLink = async(req : Request,res : Response, next : NextFunction
         return res.status(200).json({
           success : true,
           message : "Share link created Successfully",
-          Link : "http://localhost:8080/api/v1/contents/share/" + user.shareId,
-        });
-       }else{
-        user.sharingEnabled = false;
-        user.shareId = null;
-        await user.save();
+          shareId : user.shareId,
+       })}else{
+        await User.findByIdAndUpdate(userId, {
+  sharingEnabled: false,
+  $unset: {
+    shareId: 1
+  }
+});
         return res.status(200).json({
           success : true,
           message : "Sharing Disabled Successfully"

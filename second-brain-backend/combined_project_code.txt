@@ -7,20 +7,31 @@ import express from "express";
 // cors does not currently provide TypeScript declarations in this project.
 // @ts-expect-error Missing declaration file for module "cors".
 import cors from "cors";
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
+import { errorMiddleware } from "./middleware/error.middleware.js";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js"
 import contentRoutes from "./routes/content.routes.js"
+import { globalLimiter } from "./middleware/rateLimit.middleware.js";
+import  helmet  from "helmet";
+const app = express();
+app.use(helmet());
+app.use(express.json());
+app.use(cors({
+  origin : "http://localhost:5173",
+  methods : ["GET","POST","DELETE","UPDATE"],
+  allowedHeaders  : ["Content-Type", "Authorization"]
+}));
+app.use(globalLimiter);
+
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/auth",userRoutes);
 app.use("/api/v1",contentRoutes);
 app.get("/health" , (req,res) => {
-  message : "API is working Fine..."
+  res.status(200).json({
+    message : "API is working Fine..."
+  })
 })
+app.use(errorMiddleware);
 export default app;
 
 ================================================================================
@@ -68,24 +79,25 @@ FILE: controllers\auth.controller.ts
 
 import dotenv from 'dotenv';
 
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import { loginSchema, signupSchema } from '../validations/auth.validation.js';
+import z from 'zod';
 dotenv.config();
 const JWT_SECRET_KEY = process.env.JWT_SECRET;
 if (!JWT_SECRET_KEY) {
   throw new Error("JWT_SECRET is not configured");
 }
-export const signup = async (req : Request,res : Response) => {
+export const signup = async (req : Request,res : Response, next : NextFunction) => {
   try{
     const result = signupSchema.safeParse(req.body);
     if(!result.success){
       return res.status(400).json({
         success : false,
         message : "Validation failed!",
-        errors: result.error.flatten().fieldErrors
+        errors: z.flattenError(result.error).fieldErrors
       })
     }
   const {username, email, password} = result.data;
@@ -97,7 +109,7 @@ export const signup = async (req : Request,res : Response) => {
   }
   const isExisting = await User.findOne({email});
   if(isExisting){
-    return res.status(201).json({
+    return res.status(409).json({
       success : false,
       message : "User Already Exist.."
     })
@@ -108,26 +120,23 @@ export const signup = async (req : Request,res : Response) => {
     email,
     password:hashedPassword,
   });
-  res.status(200).json({
+  res.status(201).json({
     success : true,
     message : "User Created Successfully..",
   })
-}catch(e){
-  console.log("SIGNUP Error :",e);
-  res.status(500).json({
-    success : false,
-    message : "Internal Server Error..."
-  })
+}catch(error){
+  console.log("SIGNUP Error :",error);
+  next(error);
 }
 }
-export const signin =  async (req : Request,res : Response) => {
+export const signin =  async (req : Request,res : Response, next : NextFunction) => {
   try{
     const result = loginSchema.safeParse(req.body);
     if(!result.success){
       return res.status(400).json({
         success : false,
         message : "Validation failed",
-        errors: result.error.flatten().fieldErrors
+        errors: z.flattenError(result.error).fieldErrors
       })
     }
   const {username , password} = result.data;
@@ -140,16 +149,16 @@ export const signin =  async (req : Request,res : Response) => {
   }
    const user = await User.findOne({
     username
-  }).populate("username email");
+  });
     if(!user){
-    return res.status(403).json({
+    return res.status(404).json({
       success : false,
       message : "User not exists.."
     })
   }
   const isPasswordMatch = await bcrypt.compare(password,user.password);
   if(!isPasswordMatch){
-    return res.status(400).json({
+    return res.status(401).json({
       success : false,
       message : "Wrong Password!"
     })
@@ -162,10 +171,7 @@ export const signin =  async (req : Request,res : Response) => {
   });
 }catch(e){
   console.log("SIGNIN Error:",e);
-  res.status(500).json({
-    success : false,
-    message : "Internal Server Error.."
-  })
+  next(e);
 }
 }
 
@@ -175,23 +181,25 @@ export const signin =  async (req : Request,res : Response) => {
 FILE: controllers\content.controller.ts
 ================================================================================
 
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { Content } from "../models/Content.js";
-import { isValidObjectId } from "mongoose";
+import { isValidObjectId , Types } from "mongoose";
 import { generateRandomString } from "../utils.js";
 import User from "../models/User.js";
-import { contentSchema } from "../validations/content.validation.js";
+import { z } from "zod";
+import { contentSchema, updateContentSchema } from "../validations/content.validation.js";
 
-export const createContent = async (req : Request, res : Response) => {
+export const createContent = async (req : Request, res : Response, next : NextFunction) => {
    try{
        const result = contentSchema.safeParse(req.body);
        if(!result.success){
         return res.status(400).json({
           success : false,
-          message : "Validation Failed!"
+          message : "Validation Failed!",
+          errors: z.flattenError(result.error).fieldErrors
         })
        }
-       const {link , title, type , tags} = result.data;
+       const {link , title, type , tags , description} = result.data;
        if(!link || !title || !type ){
           return res.status(400).json({
             success : false,
@@ -205,12 +213,16 @@ export const createContent = async (req : Request, res : Response) => {
           message : "You're not logged in.."
         })
        }
+       const normalizedTags = tags?.map(tag => 
+        tag.toLowerCase().trim()
+       );
        await Content.create({
         link,
         type,
         title,
-          ...(tags !== undefined ? { tags } : {}),
-        userId : userId,
+        tags : normalizedTags,
+         ...(description !== undefined ? { description } : {}),
+        userId : new Types.ObjectId(userId),
        });
        res.status(201).json({
         success : true,
@@ -219,14 +231,11 @@ export const createContent = async (req : Request, res : Response) => {
    }catch(e){
       console.error("Content Adding Error:",e);
 
-      res.status(500).json({
-        success : false,
-        message : "Internal Server Error.."
-      });
+      next(e);
    }
 }
 
-export const getContent = async (req : Request ,res : Response) => {
+export const getContent = async (req : Request ,res : Response,next : NextFunction) => {
   try{
      const userId = req.user?.userId;
      if(!userId){
@@ -296,14 +305,11 @@ export const getContent = async (req : Request ,res : Response) => {
      })
   }catch(e){
      console.error("Get Content Error:",e);
-     res.status(500).json({
-      success : false,
-      message : "Internal Server Error"
-     })
+     next(e);
   }
 }
 
-export const getContentById = async(req : Request,res : Response) => {
+export const getContentById = async(req : Request,res : Response, next : NextFunction) => {
   try{
      const userId = req.user?.userId;
      if(!userId){
@@ -322,7 +328,7 @@ export const getContentById = async(req : Request,res : Response) => {
      const content = await Content.findOne({
       _id : contentId,
       userId : userId
-     }).populate("userId");
+     });
      if(!content){
       return res.status(404).json({
         success : false,
@@ -336,23 +342,21 @@ export const getContentById = async(req : Request,res : Response) => {
      })
   }catch(e){
       console.error("Get content by id Error:",e);
-      res.status(500).json({
-        success : false,
-        message : "Internal Server Error"
-      })
+      next(e);
   }
 }
 
-export const updateContent = async(req : Request,res : Response) => {
+export const updateContent = async(req : Request,res : Response,next : NextFunction) => {
   try{
-    const result = contentSchema.safeParse(req.body);
+    const result = updateContentSchema.safeParse(req.body);
     if(!result.success){
       return res.status(400).json({
         success : false,
-        message : "Validation Failed!"
+        message : "Validation Failed!",
+        errors: z.flattenError(result.error).fieldErrors
       })
     }
-     const {link , title, type} = result.data;
+     const {link , title, type, tags,description} = result.data;
      const userId = req.user?.userId;
      if(!userId){
       return res.status(401).json({
@@ -377,9 +381,12 @@ export const updateContent = async(req : Request,res : Response) => {
         message : "Content not found in db"
       })
      }
-     content.link = link || content.link;
-     content.title = title || content.title;
-     content.type = type || content.type;
+     if (link !== undefined) content.link = link;
+     if (title !== undefined) content.title = title;
+     if (type !== undefined) content.type = type;
+     if (description !== undefined) content.description = description;
+     if (tags !== undefined) content.tags = tags;
+
      await content.save()
 
      res.status(200).json({
@@ -390,14 +397,11 @@ export const updateContent = async(req : Request,res : Response) => {
   }catch(e){
     console.error("Update content error",e);
 
-    res.status(500).json({
-      success : false,
-      message : "Internal server Error",
-    })
+    next(e);
   }
 }
 
-export const deleteContent = async(req : Request,res : Response) => {
+export const deleteContent = async(req : Request,res : Response,next : NextFunction) => {
   try {
     const contentId = req.params.id;
     if(!isValidObjectId(contentId)){
@@ -430,14 +434,11 @@ export const deleteContent = async(req : Request,res : Response) => {
   }catch(e){
     console.error("Delete Content Error:",e);
 
-    res.status(500).json({
-      success : false,
-      message : "Internal Server Error"
-    })
+   next(e);
   }
 }
 
-export const deleteAllContent = async(req : Request,res : Response) => {
+export const deleteAllContent = async(req : Request,res : Response, next : NextFunction) => {
   try {
      const userId = req.user?.userId;
      if(!userId){
@@ -462,14 +463,11 @@ export const deleteAllContent = async(req : Request,res : Response) => {
      })
   }catch(e){
       console.error("Delete all content Error",e);
-      res.status(500).json({
-        success : false,
-        message : "Internal Server Error"
-      })
+      next(e);
   }
 }
 
-export const shareLink = async(req : Request,res : Response) => {
+export const shareLink = async(req : Request,res : Response, next : NextFunction) => {
   try{
        const userId = req.user?.userId;
        if(!userId){
@@ -508,13 +506,11 @@ export const shareLink = async(req : Request,res : Response) => {
        
   }catch(e){
       
-    res.status(500).json({
-      message : "Internal Server Error",
-    })
+    next(e);
   }
 }
 
-export const sharedContent = async(req : Request,res : Response) => {
+export const sharedContent = async(req : Request,res : Response,next : NextFunction) => {
   try{
      const shareId = req.params.sharedId;
      if(!shareId){
@@ -545,10 +541,7 @@ export const sharedContent = async(req : Request,res : Response) => {
       content
      })
   }catch(e){
-      res.status(500).json({
-        success : false,
-        message : "Internal Server Error"
-      })
+      next(e);
   }
 }
 
@@ -556,9 +549,9 @@ export const sharedContent = async(req : Request,res : Response) => {
 FILE: controllers\user.controller.ts
 ================================================================================
 
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import User from "../models/User.js";
-export const me = async (req : Request,res : Response) => {
+export const me = async (req : Request,res : Response,next : NextFunction) => {
   try{
      const id = req.user?.userId;
      if(!id){
@@ -584,10 +577,7 @@ export const me = async (req : Request,res : Response) => {
      })
   }catch(e){
     console.log("User End Error:",e);
-    res.status(500).json({
-      success : false,
-      message : "Internal Server Error"
-    })
+    next(e);
   }
 }
 
@@ -595,14 +585,20 @@ export const me = async (req : Request,res : Response) => {
 FILE: middleware\auth.middleware.ts
 ================================================================================
 
+import dotenv from "dotenv";
+dotenv.config();
 import express, { type NextFunction, type Request, type Response } from "express";
 import jwt from "jsonwebtoken"
-const JWT_SECRET = "mySecretKey123";
+const JWT_SECRET = process.env.JWT_SECRET;
+if(!JWT_SECRET){
+  throw new Error("JWT_SECRET not configured!")
+}
 interface AuthUser {
   userId : string,
   email : string,
 }
 const authMiddleware = (req : Request,res : Response,next : NextFunction) => {
+      
        const authHeader = req.headers.authorization;
        if(!authHeader){
         return res.status(400).json({
@@ -649,11 +645,71 @@ const authMiddleware = (req : Request,res : Response,next : NextFunction) => {
 export default authMiddleware;
 
 ================================================================================
+FILE: middleware\authLimiter.ts
+================================================================================
+
+import { rateLimit } from "express-rate-limit";
+
+export const authLimiter = rateLimit({
+  windowMs :10 * 60 * 1000,
+  limit : 5,
+  standardHeaders : true,
+  legacyHeaders : false,
+  message : {
+    success : false,
+    message : "Too many login attempts.Try again later"
+  }
+})
+
+================================================================================
+FILE: middleware\error.middleware.ts
+================================================================================
+
+import type { Request ,Response, NextFunction} from "express";
+
+export const errorMiddleware = (error : any , req : Request,res : Response,next : NextFunction) => {
+      
+    console.log(error);
+    if(res.headersSent){
+      return next(error);
+    }
+    if(error?.code === 11000){
+      const field = Object.keys(error.keyValue || {})[0];
+      return res.status(409).json({
+        success : false,
+        message : `${field} already exists`
+      });
+    }
+    return res.status(500).json({
+      success : false,
+      message : "Internal Server Error"
+    })
+
+}
+
+================================================================================
+FILE: middleware\rateLimit.middleware.ts
+================================================================================
+
+import { rateLimit } from "express-rate-limit";
+
+export const globalLimiter = rateLimit({
+  windowMs : 15 * 60 * 1000,
+  limit : 100,
+  standardHeaders : true,
+  legacyHeaders : false,
+  message : {
+    success : false,
+    message : "Too many request.Please try again later"
+  }
+})
+
+================================================================================
 FILE: models\Content.ts
 ================================================================================
 
 import { Schema, model ,Types} from "mongoose";
-const contentTypes = ['image', 'video', 'article', 'audio'];
+const contentTypes = ["note","youtube","twitter","article","document","link"];
 const ContentSchema = new Schema(
   { 
      userId : {
@@ -722,7 +778,7 @@ const userSchema = new mongoose.Schema(
     shareId : {
       type : String,
       unique : true,
-      default : null,
+      sparse : true,
     }
   },
   {
@@ -745,8 +801,9 @@ const router = express.Router();
 import { signup, signin } from "../controllers/auth.controller.js";
 import { me } from "../controllers/user.controller.js";
 import authMiddleware from "../middleware/auth.middleware.js";
-router.post("/signup", signup);
-router.post("/signin", signin);
+import { authLimiter } from "../middleware/authLimiter.js";
+router.post("/signup",authLimiter, signup);
+router.post("/signin",authLimiter, signin);
 router.get("/me",authMiddleware,me);
 export default router;
 
@@ -768,7 +825,7 @@ router.put("/content/:id",authMiddleware,updateContent);
 router.delete("/content/:id",authMiddleware,deleteContent);
 router.delete("/contents/deleteAll",authMiddleware,deleteAllContent);
 router.post("/contents/share",authMiddleware,shareLink);
-router.get("/contents/share/:sharedId",authMiddleware,sharedContent);
+router.get("/contents/share/:sharedId",sharedContent);
 export default router;
 
 ================================================================================
@@ -814,8 +871,9 @@ export const signupSchema = z.object({
   .max(50, "Name is too long"),
 
   email : z
-  .string()
-  .email("Invalid email"),
+  .email({
+    error : "Invalid Email"
+  }),
 
   password : z
   .string()
@@ -851,8 +909,10 @@ export const contentSchema = z.object({
     .optional(),
 
   link: z
-    .string()
-    .url("Invalid URL"),
+    .url({
+      error : "Invalid URL"
+    })
+    .optional(),
 
   type: z.enum([
     "note",
@@ -866,3 +926,5 @@ export const contentSchema = z.object({
   tags: z
     .array(z.string())
 })
+
+export const updateContentSchema = contentSchema.partial();
