@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 // cors does not currently provide TypeScript declarations in this project.
 // @ts-expect-error Missing declaration file for module "cors".
@@ -12,7 +14,7 @@ const app = express();
 app.use(helmet());
 app.use(express.json());
 app.use(cors({
-  origin : "http://localhost:5174",
+  origin : process.env.FRONTEND_URL,
   methods : ["GET","POST","DELETE","UPDATE"],
   allowedHeaders  : ["Content-Type", "Authorization"]
 }));
