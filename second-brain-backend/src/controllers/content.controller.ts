@@ -17,10 +17,10 @@ export const createContent = async (req : Request, res : Response, next : NextFu
         })
        }
        const {link , title, type , tags , description} = result.data;
-       if(!link || !title || !type ){
+       if(!title || !type ){
           return res.status(400).json({
             success : false,
-            message : "All fields are required.."
+            message : "Some fields are required.."
           });
        }
        const userId = req.user?.userId;
@@ -34,7 +34,7 @@ export const createContent = async (req : Request, res : Response, next : NextFu
         tag.toLowerCase().trim()
        );
        await Content.create({
-        link,
+        ...(link ? {link} : {}),
         type,
         title,
         tags : normalizedTags,
