@@ -2,7 +2,7 @@ import express from "express";
 
 const router = express.Router();
 
-import { createContent, deleteAllContent, deleteContent, getContent, getContentById, sharedContent, shareLink, updateContent } from "../controllers/content.controller.js";
+import { createContent, deleteAllContent, deleteContent, getContent, getContentById, sharedContent, shareLink, updateContent,shareContent,getSharedContent } from "../controllers/content.controller.js";
 import authMiddleware from "../middleware/auth.middleware.js";
 
 router.post("/content",authMiddleware,createContent);
@@ -13,4 +13,13 @@ router.delete("/content/:id",authMiddleware,deleteContent);
 router.delete("/contents/deleteAll",authMiddleware,deleteAllContent);
 router.post("/contents/share",authMiddleware,shareLink);
 router.get("/contents/share/:sharedId",sharedContent);
+router.post(
+  "/content/:id/share",
+  authMiddleware,
+  shareContent
+);
+router.get(
+  "/share/content/:shareId",
+  getSharedContent
+);
 export default router;

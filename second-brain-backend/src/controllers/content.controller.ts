@@ -373,3 +373,84 @@ export const sharedContent = async(req : Request,res : Response,next : NextFunct
       next(e);
   }
 }
+
+export const shareContent = async(req : Request,res : Response,next : NextFunction) => {
+  try{
+     const userId = req.user?.userId;
+     const contentId = req.params.id;
+     if(!userId){
+      return res.status(401).json({
+        success : false,
+        message : "Unauthorized"
+      });
+     }
+     if(!isValidObjectId(contentId)){
+      return res.status(400).json({
+        success : false,
+        message : "Invalid Content Id"
+      })
+     }
+     const content = await Content.findOne({
+      _id : contentId,
+      userId
+     })
+     if(!content){
+      return res.status(404).json({
+        success : false,
+        message : "Content Not Found!"
+      })
+     }
+     const sharingEnabled = req.body.sharingEnabled;
+     if(sharingEnabled === true){
+      if(!content.shareId){
+        content.shareId = generateRandomString(10);
+      }
+      content.sharingEnabled = true;
+      await content.save();
+
+      return res.status(200).json({
+        success : true,
+        message : "Content sharing Enable",
+        shareId : content.shareId
+      })
+     }
+     content.sharingEnabled = false;
+     content.shareId = null;
+     await content.save();
+
+     return res.status(200).json({
+      success : true,
+      message : "Content Sharing Disable",
+     })
+  }catch(error){
+     next(error);
+  }
+}
+
+export const getSharedContent = async(req : Request,res : Response,next : NextFunction) => {
+  try{
+    const shareId = req.params.shareId;
+    if(typeof shareId != "string"){
+      return res.status(400).json({
+        success : false,
+        message : "Invalid Share Id"
+      })
+    }
+    const content = await Content.findOne({
+      shareId ,
+      sharingEnabled : true,
+    })
+    if(!content){
+      return res.status(404).json({
+        success : false,
+        message : "Content not found!"
+      })
+    }
+    return res.status(200).json({
+      success : true,
+      content
+    })
+  }catch(error){
+    next(error);
+  }
+}

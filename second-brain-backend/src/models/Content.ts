@@ -28,6 +28,15 @@ const ContentSchema = new Schema(
     type : [String],
     default : [],
     },
+    sharingEnabled : {
+      type : Boolean,
+      default : false,
+    },
+    shareId : {
+      type : String,
+      unique : true,
+      sparse : true,
+    },
   },
   {
     timestamps : true,
