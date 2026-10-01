@@ -3770,6 +3770,20 @@ body {
 * {
   box-sizing: border-box;
 }
+/* Keep long saved content inside its card and avoid mobile input zoom. */
+button, a, input, select, textarea { touch-action: manipulation; }
+button:focus-visible, a:focus-visible { outline: 2px solid #a78bfa; outline-offset: 3px; }
+@media (max-width: 639px) {
+  input, select, textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+@media (pointer: coarse) {
+  button { min-height: 44px; }
+}
+
 
 ================================================================================
 FILE: src\main.tsx
@@ -3905,14 +3919,15 @@ const AddContentModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4 backdrop-blur-sm">
 
-      <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
+      <div className="relative flex flex-col max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
 
         {/* Close button stays fixed */}
 
         <button
           onClick={handleClose}
+          aria-label="Close dialog"
           className="absolute right-4 top-4 z-20 rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
         >
           <X size={18} />
@@ -3920,7 +3935,7 @@ const AddContentModal = ({
 
         {/* Header */}
 
-        <div className="border-b border-zinc-800 px-6 py-5 pr-16">
+        <div className="border-b border-zinc-800 shrink-0 px-4 py-4 pr-16 sm:px-6 sm:py-5 sm:pr-16">
 
           <h2 className="text-xl font-semibold text-zinc-100">
             Add Content
@@ -3934,7 +3949,7 @@ const AddContentModal = ({
 
         {/* Scrollable body */}
 
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
 
           {error && (
             <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
@@ -4042,11 +4057,12 @@ const AddContentModal = ({
 
             {/* Buttons */}
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-3 pt-2 flex-wrap">
 
               <button
                 type="button"
                 onClick={handleClose}
+
                 className="rounded-xl border border-zinc-800 px-4 py-2.5 text-sm text-zinc-400 transition hover:bg-zinc-800"
               >
                 Cancel
@@ -4150,7 +4166,7 @@ const ContentCard = ({
   ] = useState(false);
 
   return (
-    <div className="group relative rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 transition duration-300 hover:-translate-y-1 hover:border-zinc-700 hover:bg-zinc-900">
+    <div className="group relative min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 transition duration-300 hover:-translate-y-1 hover:border-zinc-700 hover:bg-zinc-900">
 
       <div className="mb-5 flex items-center justify-between">
 
@@ -4163,12 +4179,14 @@ const ContentCard = ({
         <div className="relative">
 
           <button
+            aria-label="Content actions"
+            aria-expanded={menuOpen}
             onClick={() =>
               setMenuOpen(
                 !menuOpen
               )
             }
-            className="rounded-lg p-1.5 text-zinc-600 transition hover:bg-zinc-800 hover:text-zinc-300"
+            className="min-h-11 min-w-11 rounded-lg p-2.5 text-zinc-600 transition hover:bg-zinc-800 hover:text-zinc-300"
           >
             <MoreHorizontal
               size={18}
@@ -4223,12 +4241,12 @@ const ContentCard = ({
 
       </div>
 
-      <h3 className="mb-2 font-medium leading-6 text-zinc-100">
+      <h3 className="mb-2 break-words font-medium leading-6 text-zinc-100">
         {content.title}
       </h3>
 
       {content.description && (
-        <p className="mb-5 line-clamp-2 text-sm leading-6 text-zinc-500">
+        <p className="mb-5 break-words line-clamp-2 text-sm leading-6 text-zinc-500">
           {content.description}
         </p>
       )}
@@ -4254,7 +4272,7 @@ const ContentCard = ({
           (tag) => (
             <span
               key={tag}
-              className="rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-400"
+              className="max-w-full break-all rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-400"
             >
               #{tag}
             </span>
@@ -4291,9 +4309,9 @@ const DeleteConfirmModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4 backdrop-blur-sm">
 
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
+      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6 shadow-2xl">
 
         <div className="mb-5 flex items-start justify-between">
 
@@ -4317,6 +4335,7 @@ const DeleteConfirmModal = ({
 
           <button
             onClick={onClose}
+          aria-label="Close dialog"
             className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
           >
             <X size={18} />
@@ -4324,10 +4343,11 @@ const DeleteConfirmModal = ({
 
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 flex-wrap">
 
           <button
             onClick={onClose}
+
             className="rounded-xl border border-zinc-800 px-4 py-2.5 text-sm text-zinc-400 hover:bg-zinc-800"
           >
             Cancel
@@ -4466,9 +4486,9 @@ const EditContentModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4 backdrop-blur-sm">
 
-      <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
+      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6 shadow-2xl">
 
         <div className="mb-6 flex items-center justify-between">
 
@@ -4484,6 +4504,7 @@ const EditContentModal = ({
 
           <button
             onClick={onClose}
+          aria-label="Close dialog"
             className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
           >
             <X size={18} />
@@ -4577,11 +4598,12 @@ const EditContentModal = ({
             onChange={setTags}
           />
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-3 pt-2 flex-wrap">
 
             <button
               type="button"
               onClick={onClose}
+
               className="rounded-xl border border-zinc-800 px-4 py-2.5 text-sm text-zinc-400 hover:bg-zinc-800"
             >
               Cancel
@@ -4707,7 +4729,7 @@ const SharedContentCard = ({
   content,
 }: Props) => {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 transition hover:border-zinc-700 hover:bg-zinc-900">
+    <div className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 transition hover:border-zinc-700 hover:bg-zinc-900">
 
       <div className="mb-5 flex items-center justify-between">
 
@@ -4722,12 +4744,12 @@ const SharedContentCard = ({
 
       </div>
 
-      <h3 className="mb-2 font-medium leading-6 text-zinc-100">
+      <h3 className="mb-2 break-words font-medium leading-6 text-zinc-100">
         {content.title}
       </h3>
 
       {content.description && (
-        <p className="mb-5 line-clamp-3 text-sm leading-6 text-zinc-500">
+        <p className="mb-5 break-words line-clamp-3 text-sm leading-6 text-zinc-500">
           {content.description}
         </p>
       )}
@@ -4751,7 +4773,7 @@ const SharedContentCard = ({
           (tag) => (
             <span
               key={tag}
-              className="rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-400"
+              className="max-w-full break-all rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-400"
             >
               #{tag}
             </span>
@@ -4764,7 +4786,7 @@ const SharedContentCard = ({
   );
 };
 
-export default SharedContentCard;
+export default SharedContentCard;//helo
 
 ================================================================================
 FILE: src\components\ShareModal.tsx
@@ -4813,18 +4835,19 @@ const ShareModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4 backdrop-blur-sm">
 
-      <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
+      <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6 shadow-2xl">
 
         <button
           onClick={onClose}
+          aria-label="Close dialog"
           className="absolute right-4 top-4 rounded-lg p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
         >
           <X size={18} />
         </button>
 
-        <div className="mb-6 flex items-start gap-3">
+        <div className="mb-6 flex items-start gap-3 pr-10">
 
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
             <Share2 size={20} />
@@ -4897,7 +4920,10 @@ export default ShareModal;
 FILE: src\components\Sidebar.tsx
 ================================================================================
 
+import { useState } from "react";
 import {
+  Menu,
+  X,
   Brain,
   FileText,
   Video,
@@ -4926,17 +4952,34 @@ const Sidebar = ({
   onTypeChange,
   onTagChange,
 }: Props) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const selectType = (type: string) => {
+    onTypeChange(type);
+    setMenuOpen(false);
+  };
+  const selectTag = (tag: string) => {
+    onTagChange(tag);
+    setMenuOpen(false);
+  };
   const {
     user,
     logout,
   } = useAuth();
 
   return (
-    <aside className="fixed left-0 top-0 flex h-screen w-64 flex-col border-r border-zinc-800 bg-zinc-950 p-4">
+    <>
+      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 py-3 lg:hidden">
+        <div className="flex items-center gap-2 font-semibold"><Brain className="text-violet-400" size={22} /> Cortex</div>
+        <button type="button" aria-expanded={menuOpen} aria-controls="brain-navigation" onClick={() => setMenuOpen(!menuOpen)} className="flex min-h-11 items-center gap-2 rounded-xl border border-zinc-800 px-3 text-sm">
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          {menuOpen ? "Close menu" : "Menu"}
+        </button>
+      </div>
+      <aside id="brain-navigation" aria-label="Workspace navigation" onKeyDown={(event) => { if (event.key === "Escape") setMenuOpen(false); }} className={`${menuOpen ? "flex" : "hidden"} w-full flex-col border-b border-zinc-800 bg-zinc-950 p-4 lg:fixed lg:left-0 lg:top-0 lg:z-30 lg:flex lg:h-dvh lg:w-64 lg:overflow-y-auto lg:border-b-0 lg:border-r`}>
 
       {/* Logo */}
 
-      <div className="mb-8 flex items-center gap-3 px-2">
+      <div className="mb-8 hidden items-center gap-3 px-2 lg:flex">
 
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-500/20">
 
@@ -4974,7 +5017,7 @@ const Sidebar = ({
             selectedType === ""
           }
           onClick={() =>
-            onTypeChange("")
+            selectType("")
           }
         />
 
@@ -4988,7 +5031,7 @@ const Sidebar = ({
             "note"
           }
           onClick={() =>
-            onTypeChange(
+            selectType(
               "note"
             )
           }
@@ -5004,7 +5047,7 @@ const Sidebar = ({
             "youtube"
           }
           onClick={() =>
-            onTypeChange(
+            selectType(
               "youtube"
             )
           }
@@ -5020,7 +5063,7 @@ const Sidebar = ({
             "article"
           }
           onClick={() =>
-            onTypeChange(
+            selectType(
               "article"
             )
           }
@@ -5036,7 +5079,7 @@ const Sidebar = ({
             "link"
           }
           onClick={() =>
-            onTypeChange(
+            selectType(
               "link"
             )
           }
@@ -5046,13 +5089,7 @@ const Sidebar = ({
 
       {/* Tags */}
 
-      <div className="mt-8">
-
-        <p className="mb-3 px-3 text-xs font-medium uppercase tracking-wider text-zinc-600">
-          Tags
-        </p>
-
-        <div className="mt-8">
+      <div className="my-6 min-w-0">
 
   <p className="mb-3 px-3 text-xs font-medium uppercase tracking-wider text-zinc-600">
     Tags
@@ -5069,16 +5106,11 @@ const Sidebar = ({
         name={tag}
         active={selectedTag === tag}
         onClick={() =>
-          onTagChange(
-            selectedTag === tag
-              ? ""
-              : tag
-          )
+          selectTag(selectedTag === tag ? "" : tag)
         }
       />
     ))
   )}
-</div>
 </div>
 
       {/* User */}
@@ -5109,7 +5141,8 @@ const Sidebar = ({
 
           <button
             onClick={logout}
-            className="text-zinc-500 transition hover:text-zinc-200"
+            aria-label="Log out"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-zinc-500 transition hover:text-zinc-200"
           >
 
             <LogOut size={17} />
@@ -5121,6 +5154,7 @@ const Sidebar = ({
       </div>
 
     </aside>
+    </>
   );
 };
 
@@ -5182,7 +5216,7 @@ const Tag = ({
 
       <Hash size={14} />
 
-      {name}
+      <span className="min-w-0 break-all text-left">{name}</span>
 
     </button>
   );
@@ -5218,13 +5252,13 @@ const Topbar = ({
   onShare,
 }: Props) => {
   return (
-    <header className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/80 px-8 py-4 backdrop-blur-xl">
+    <header className="sticky top-0 z-20 border-b border-zinc-800 bg-zinc-950/80 px-4 py-3 sm:px-6 lg:px-8 lg:py-4 backdrop-blur-xl">
 
-      <div className="flex items-center justify-between gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
 
         {/* Search */}
 
-        <div className="relative w-full max-w-md">
+        <div className="relative min-w-0 w-full sm:max-w-md">
 
           <Search
             size={17}
@@ -5232,6 +5266,7 @@ const Topbar = ({
           />
 
           <input
+            aria-label="Search your brain"
             value={search}
             onChange={(e) =>
               onSearchChange(
@@ -5246,10 +5281,10 @@ const Topbar = ({
 
         {/* Buttons */}
 
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
          <button
   onClick={onShare}
-  className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-800"
+  className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl sm:flex-none border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-300 transition hover:bg-zinc-800"
 >
   <Share2 size={16} />
   Share
@@ -5259,7 +5294,7 @@ const Topbar = ({
             onClick={
               onAddContent
             }
-            className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl sm:flex-none bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
           >
 
             <Plus size={17} />
@@ -5740,7 +5775,7 @@ const availableTags = Array.from(
   }}
       />
 
-      <main className="ml-64 min-h-screen">
+      <main className="min-w-0 min-h-dvh lg:ml-64">
 
         {/* Topbar */}
 
@@ -5756,7 +5791,7 @@ const availableTags = Array.from(
   onShare={handleShare}
 />
 
-        <section className="p-8">
+        <section className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
 
           {/* Heading */}
 
@@ -5766,7 +5801,7 @@ const availableTags = Array.from(
               Workspace
             </p>
 
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               My Second Brain
             </h1>
 
@@ -5780,7 +5815,7 @@ const availableTags = Array.from(
 
           {/* Controls */}
 
-          <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500">
 
@@ -5789,14 +5824,14 @@ const availableTags = Array.from(
               </span>
 
               {selectedType && (
-                <span className="rounded-lg bg-zinc-900 px-3 py-1.5">
+                <span className="max-w-full break-all rounded-lg bg-zinc-900 px-3 py-1.5">
                   Type:{" "}
                   {selectedType}
                 </span>
               )}
 
               {selectedTag && (
-                <span className="rounded-lg bg-violet-500/10 px-3 py-1.5 text-violet-400">
+                <span className="max-w-full break-all rounded-lg bg-violet-500/10 px-3 py-1.5 text-violet-400">
                   #
                   {selectedTag}
                 </span>
@@ -5807,6 +5842,7 @@ const availableTags = Array.from(
             {/* Sorting */}
 
             <select
+              aria-label="Sort content"
               value={sort}
               onChange={(e) => {
                 setSort(
@@ -5856,7 +5892,7 @@ const availableTags = Array.from(
             !error &&
             contents.length ===
               0 && (
-              <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 p-12 text-center">
+              <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 px-4 py-8 sm:p-12 text-center">
 
                 <h2 className="text-lg font-medium text-zinc-300">
                   No content
@@ -5877,7 +5913,7 @@ const availableTags = Array.from(
           {!loading &&
             contents.length >
               0 && (
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
 
                 {contents.map(
                   (content) => (
@@ -5905,7 +5941,7 @@ const availableTags = Array.from(
 
           {!loading &&
             totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-3">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
 
                 <button
                   disabled={
@@ -6148,7 +6184,7 @@ const Login = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 px-4 text-zinc-100">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 px-4 py-8 text-zinc-100">
 
       {/* Background glow */}
 
@@ -6188,7 +6224,7 @@ const Login = () => {
 
         {/* Card */}
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 sm:p-8 shadow-2xl backdrop-blur-xl">
 
           <h2 className="text-2xl font-semibold">
             Welcome back
@@ -6427,7 +6463,7 @@ const SharedBrain = () => {
 
       <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-xl">
 
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
 
           <div className="flex items-center gap-3">
 
@@ -6464,7 +6500,7 @@ const SharedBrain = () => {
 
       {/* Main */}
 
-      <main className="mx-auto max-w-7xl px-6 py-12">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
 
         <div className="mb-10">
 
@@ -6472,7 +6508,7 @@ const SharedBrain = () => {
             Public collection
           </p>
 
-          <h2 className="text-3xl font-semibold tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             Shared Brain
           </h2>
 
@@ -6484,7 +6520,7 @@ const SharedBrain = () => {
         </div>
 
         {contents.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 p-12 text-center">
+          <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 px-4 py-8 sm:p-12 text-center">
 
             <Brain
               size={28}
@@ -6660,7 +6696,7 @@ const Signup = () => {
 
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 sm:p-8 shadow-2xl backdrop-blur-xl">
 
           <h2 className="text-2xl font-semibold">
             Create your brain
