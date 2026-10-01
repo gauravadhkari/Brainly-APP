@@ -4,7 +4,10 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
+
 import SharedBrain from "./pages/SharedBrain";
+import SharedContent from "./pages/SharedContent";
+
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
@@ -29,26 +32,48 @@ const App = () => {
 
         <Route
           path="/login"
-          element={<Login />}
+          element={
+            <Login />
+          }
         />
 
         <Route
           path="/signup"
-          element={<Signup />}
+          element={
+            <Signup />
+          }
         />
+
+        {/* Protected dashboard */}
 
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
+
               <Dashboard />
+
             </ProtectedRoute>
           }
         />
+
+        {/* Old whole-brain sharing */}
+
         <Route
-  path="/share/:shareId"
-  element={<SharedBrain />}
-/>
+          path="/share/:shareId"
+          element={
+            <SharedBrain />
+          }
+        />
+
+        {/* NEW individual content sharing */}
+
+        <Route
+          path="/share/content/:shareId"
+          element={
+            <SharedContent />
+          }
+        />
 
       </Routes>
 

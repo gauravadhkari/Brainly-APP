@@ -5,6 +5,10 @@ export interface Content {
   link?: string;
   type: string;
   tags: string[];
+
+  sharingEnabled?: boolean;
+  shareId?: string;
+
   createdAt: string;
   updatedAt: string;
 }

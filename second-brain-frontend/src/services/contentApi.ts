@@ -54,11 +54,17 @@ export const getContents = async (
   }
 
   if (query.page) {
-    params.set("page", query.page.toString());
+    params.set(
+      "page",
+      query.page.toString()
+    );
   }
 
   if (query.limit) {
-    params.set("limit", query.limit.toString());
+    params.set(
+      "limit",
+      query.limit.toString()
+    );
   }
 
   const response = await fetch(
@@ -74,7 +80,8 @@ export const getContents = async (
 
   if (!response.ok) {
     throw new Error(
-      data.message || "Failed to fetch content"
+      data.message ||
+        "Failed to fetch content"
     );
   }
 
@@ -92,19 +99,26 @@ export const updateContent = async (
       method: "PUT",
 
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
       },
 
-      body: JSON.stringify(payload),
+      body: JSON.stringify(
+        payload
+      ),
     }
   );
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok) {
     throw new Error(
-      data.message || "Failed to update content"
+      data.message ||
+        "Failed to update content"
     );
   }
 
@@ -121,21 +135,31 @@ export const deleteContent = async (
       method: "DELETE",
 
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok) {
     throw new Error(
-      data.message || "Failed to delete content"
+      data.message ||
+        "Failed to delete content"
     );
   }
 
   return data;
 };
+
+/*
+|--------------------------------------------------------------------------
+| OLD WHOLE-BRAIN SHARING
+|--------------------------------------------------------------------------
+| Keeping these so your old SharedBrain.tsx still works.
+*/
 
 export const enableSharing = async (
   token: string
@@ -146,8 +170,11 @@ export const enableSharing = async (
       method: "POST",
 
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
       },
 
       body: JSON.stringify({
@@ -156,16 +183,19 @@ export const enableSharing = async (
     }
   );
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok) {
     throw new Error(
-      data.message || "Failed to enable sharing"
+      data.message ||
+        "Failed to enable sharing"
     );
   }
 
   return data;
 };
+
 export const disableSharing = async (
   token: string
 ) => {
@@ -173,26 +203,34 @@ export const disableSharing = async (
     `${API_URL}/contents/share`,
     {
       method: "POST",
+
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
       },
+
       body: JSON.stringify({
         sharingEnabled: false,
       }),
     }
   );
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok) {
     throw new Error(
-      data.message || "Failed to disable sharing"
+      data.message ||
+        "Failed to disable sharing"
     );
   }
 
   return data;
 };
+
 export const getSharedContent = async (
   shareId: string
 ) => {
@@ -200,13 +238,127 @@ export const getSharedContent = async (
     `${API_URL}/contents/share/${shareId}`
   );
 
-  const data = await response.json();
+  const data =
+    await response.json();
 
   if (!response.ok) {
     throw new Error(
-      data.message || "Shared brain not found"
+      data.message ||
+        "Shared brain not found"
     );
   }
 
   return data;
 };
+
+/*
+|--------------------------------------------------------------------------
+| NEW — INDIVIDUAL CONTENT SHARING
+|--------------------------------------------------------------------------
+*/
+
+interface ContentShareResponse {
+  success: boolean;
+  message: string;
+
+  shareId?: string;
+
+  // Added as fallback in case
+  // your backend returns Link.
+  Link?: string;
+}
+
+export const enableContentSharing =
+  async (
+    token: string,
+    contentId: string
+  ): Promise<ContentShareResponse> => {
+    const response = await fetch(
+      `${API_URL}/content/${contentId}/share`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          Authorization:
+            `Bearer ${token}`,
+        },
+
+        body: JSON.stringify({
+          sharingEnabled: true,
+        }),
+      }
+    );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          "Failed to share content"
+      );
+    }
+
+    return data;
+  };
+
+export const disableContentSharing =
+  async (
+    token: string,
+    contentId: string
+  ) => {
+    const response = await fetch(
+      `${API_URL}/content/${contentId}/share`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+
+          Authorization:
+            `Bearer ${token}`,
+        },
+
+        body: JSON.stringify({
+          sharingEnabled: false,
+        }),
+      }
+    );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          "Failed to disable content sharing"
+      );
+    }
+
+    return data;
+  };
+
+export const getSharedSingleContent =
+  async (
+    shareId: string
+  ) => {
+    const response = await fetch(
+      `${API_URL}/share/content/${shareId}`
+    );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          "Shared content not found"
+      );
+    }
+
+    return data;
+  };

@@ -13,22 +13,30 @@ import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import ShareModal from "../components/ShareModal";
 
 import {
-  enableSharing,
-  disableSharing,
+  deleteContent,
+  disableContentSharing,
+  enableContentSharing,
+  getContents,
 } from "../services/contentApi";
-
-import { useAuth } from "../context/AuthContext";
 
 import {
-  getContents,
-  deleteContent,
-} from "../services/contentApi";
+  useAuth,
+} from "../context/AuthContext";
 
-import type { Content } from "../types/content";
+import type {
+  Content,
+} from "../types/content";
 
 const Dashboard = () => {
-  const { token } =
-    useAuth();
+  const {
+    token,
+  } = useAuth();
+
+  /*
+  |--------------------------------------------------------------------------
+  | Content
+  |--------------------------------------------------------------------------
+  */
 
   const [
     contents,
@@ -45,10 +53,22 @@ const Dashboard = () => {
     setError,
   ] = useState("");
 
+  /*
+  |--------------------------------------------------------------------------
+  | Add modal
+  |--------------------------------------------------------------------------
+  */
+
   const [
     isAddModalOpen,
     setIsAddModalOpen,
   ] = useState(false);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Edit modal
+  |--------------------------------------------------------------------------
+  */
 
   const [
     isEditOpen,
@@ -63,6 +83,12 @@ const Dashboard = () => {
       null
     );
 
+  /*
+  |--------------------------------------------------------------------------
+  | Delete
+  |--------------------------------------------------------------------------
+  */
+
   const [
     deleteId,
     setDeleteId,
@@ -76,7 +102,11 @@ const Dashboard = () => {
     setDeleteLoading,
   ] = useState(false);
 
-  // Search / filters
+  /*
+  |--------------------------------------------------------------------------
+  | Search / Filter
+  |--------------------------------------------------------------------------
+  */
 
   const [
     search,
@@ -100,7 +130,11 @@ const Dashboard = () => {
     "newest" | "oldest"
   >("newest");
 
-  // Pagination
+  /*
+  |--------------------------------------------------------------------------
+  | Pagination
+  |--------------------------------------------------------------------------
+  */
 
   const [
     page,
@@ -116,26 +150,51 @@ const Dashboard = () => {
     totalItems,
     setTotalItems,
   ] = useState(0);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Individual sharing
+  |--------------------------------------------------------------------------
+  */
+
   const [
-  shareModalOpen,
-  setShareModalOpen,
-] = useState(false);
+    shareModalOpen,
+    setShareModalOpen,
+  ] = useState(false);
 
-const [
-  shareLink,
-  setShareLink,
-] = useState("");
+  const [
+    shareLink,
+    setShareLink,
+  ] = useState("");
 
-const [
-  shareLoading,
-  setShareLoading,
-] = useState(false);
+  const [
+    shareLoading,
+    setShareLoading,
+  ] = useState(false);
+
+  const [
+    sharingContent,
+    setSharingContent,
+  ] =
+    useState<Content | null>(
+      null
+    );
+
+  /*
+  |--------------------------------------------------------------------------
+  | Fetch content
+  |--------------------------------------------------------------------------
+  */
+
   const fetchContents =
     useCallback(async () => {
       try {
-        if (!token) return;
+        if (!token) {
+          return;
+        }
 
         setLoading(true);
+
         setError("");
 
         const data =
@@ -143,12 +202,17 @@ const [
             token,
             {
               search,
+
               type:
                 selectedType,
+
               tag:
                 selectedTag,
+
               sort,
+
               page,
+
               limit: 9,
             }
           );
@@ -190,6 +254,12 @@ const [
     fetchContents();
   }, [fetchContents]);
 
+  /*
+  |--------------------------------------------------------------------------
+  | Edit
+  |--------------------------------------------------------------------------
+  */
+
   const handleEdit = (
     content: Content
   ) => {
@@ -197,13 +267,23 @@ const [
       content
     );
 
-    setIsEditOpen(true);
+    setIsEditOpen(
+      true
+    );
   };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Delete
+  |--------------------------------------------------------------------------
+  */
 
   const handleDelete = (
     id: string
   ) => {
-    setDeleteId(id);
+    setDeleteId(
+      id
+    );
   };
 
   const confirmDelete =
@@ -227,10 +307,14 @@ const [
           deleteId
         );
 
-        setDeleteId(null);
+        setDeleteId(
+          null
+        );
 
         await fetchContents();
+
       } catch (error) {
+
         if (
           error instanceof Error
         ) {
@@ -238,100 +322,263 @@ const [
             error.message
           );
         }
+
       } finally {
+
         setDeleteLoading(
           false
         );
       }
     };
-    const handleShare = async () => {
-  if (!token) return;
 
-  try {
-    setShareLoading(true);
-    setError("");
+  /*
+  |--------------------------------------------------------------------------
+  | Share ONE content
+  |--------------------------------------------------------------------------
+  */
 
-    const data =
-      await enableSharing(token);
-
-    const publicUrl =
-  `${window.location.origin}/share/${data.shareId}`;
-
-setShareLink(publicUrl);
-
-    setShareModalOpen(true);
-  } catch (error) {
-    if (error instanceof Error) {
-      setError(error.message);
-    }
-  } finally {
-    setShareLoading(false);
-  }
-};
-const handleDisableSharing =
-  async () => {
-    if (!token) return;
-
-    try {
-      setShareLoading(true);
-
-      await disableSharing(token);
-
-      setShareLink("");
-
-      setShareModalOpen(false);
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
+  const handleContentShare =
+    async (
+      content: Content
+    ) => {
+      if (!token) {
+        return;
       }
-    } finally {
-      setShareLoading(false);
-    }
-  };
-const availableTags = Array.from(
-  new Set(
-    contents.flatMap(
-      (content) =>
-        content.tags || []
-    )
-  )
-);
+
+      try {
+        setShareLoading(
+          true
+        );
+
+        setError("");
+
+        setSharingContent(
+          content
+        );
+
+        /*
+         * Enable sharing for only
+         * this content item.
+         */
+        const data =
+          await enableContentSharing(
+            token,
+            content._id
+          );
+
+        /*
+         * Our recommended backend
+         * returns:
+         *
+         * {
+         *   shareId: "abc123"
+         * }
+         */
+
+        let shareId =
+          data.shareId;
+
+        /*
+         * Optional fallback if your
+         * backend returns a full Link.
+         */
+        if (
+          !shareId &&
+          data.Link
+        ) {
+          shareId =
+            data.Link
+              .split("/")
+              .filter(Boolean)
+              .pop();
+        }
+
+        if (!shareId) {
+          throw new Error(
+            "Backend did not return a shareId"
+          );
+        }
+
+        /*
+         * Important:
+         *
+         * We create a FRONTEND URL,
+         * not a backend API URL.
+         */
+
+        const publicUrl =
+          `${window.location.origin}/share/content/${shareId}`;
+
+        setShareLink(
+          publicUrl
+        );
+
+        setShareModalOpen(
+          true
+        );
+
+        /*
+         * Refresh so the card can
+         * show the Shared badge.
+         */
+
+        await fetchContents();
+
+      } catch (error) {
+
+        setSharingContent(
+          null
+        );
+
+        if (
+          error instanceof Error
+        ) {
+          setError(
+            error.message
+          );
+        }
+
+      } finally {
+
+        setShareLoading(
+          false
+        );
+      }
+    };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Disable sharing for ONE content
+  |--------------------------------------------------------------------------
+  */
+
+  const handleDisableContentSharing =
+    async () => {
+      if (
+        !token ||
+        !sharingContent
+      ) {
+        return;
+      }
+
+      try {
+        setShareLoading(
+          true
+        );
+
+        setError("");
+
+        await disableContentSharing(
+          token,
+          sharingContent._id
+        );
+
+        setShareLink("");
+
+        setShareModalOpen(
+          false
+        );
+
+        setSharingContent(
+          null
+        );
+
+        await fetchContents();
+
+      } catch (error) {
+
+        if (
+          error instanceof Error
+        ) {
+          setError(
+            error.message
+          );
+        }
+
+      } finally {
+
+        setShareLoading(
+          false
+        );
+      }
+    };
+
+  /*
+  |--------------------------------------------------------------------------
+  | Available tags
+  |--------------------------------------------------------------------------
+  */
+
+  const availableTags =
+    Array.from(
+      new Set(
+        contents.flatMap(
+          (content) =>
+            content.tags || []
+        )
+      )
+    );
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
 
       {/* Sidebar */}
 
       <Sidebar
-        selectedType={selectedType}
-  selectedTag={selectedTag}
-  tags={availableTags}
+        selectedType={
+          selectedType
+        }
+        selectedTag={
+          selectedTag
+        }
+        tags={
+          availableTags
+        }
 
-  onTypeChange={(type) => {
-    setSelectedType(type);
-    setPage(1);
-  }}
+        onTypeChange={(
+          type
+        ) => {
+          setSelectedType(
+            type
+          );
 
-  onTagChange={(tag) => {
-    setSelectedTag(tag);
-    setPage(1);
-  }}
+          setPage(1);
+        }}
+
+        onTagChange={(
+          tag
+        ) => {
+          setSelectedTag(
+            tag
+          );
+
+          setPage(1);
+        }}
       />
 
-      <main className="min-w-0 min-h-dvh lg:ml-64">
+      <main className="min-h-dvh min-w-0 lg:ml-64">
 
         {/* Topbar */}
 
         <Topbar
-  search={search}
-  onSearchChange={(value) => {
-    setSearch(value);
-    setPage(1);
-  }}
-  onAddContent={() =>
-    setIsAddModalOpen(true)
-  }
-  onShare={handleShare}
-/>
+          search={search}
+
+          onSearchChange={(
+            value
+          ) => {
+            setSearch(
+              value
+            );
+
+            setPage(1);
+          }}
+
+          onAddContent={() =>
+            setIsAddModalOpen(
+              true
+            )
+          }
+        />
 
         <section className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
 
@@ -367,15 +614,19 @@ const availableTags = Array.from(
 
               {selectedType && (
                 <span className="max-w-full break-all rounded-lg bg-zinc-900 px-3 py-1.5">
+
                   Type:{" "}
                   {selectedType}
+
                 </span>
               )}
 
               {selectedTag && (
                 <span className="max-w-full break-all rounded-lg bg-violet-500/10 px-3 py-1.5 text-violet-400">
+
                   #
                   {selectedTag}
+
                 </span>
               )}
 
@@ -385,7 +636,9 @@ const availableTags = Array.from(
 
             <select
               aria-label="Sort content"
+
               value={sort}
+
               onChange={(e) => {
                 setSort(
                   e.target
@@ -396,6 +649,7 @@ const availableTags = Array.from(
 
                 setPage(1);
               }}
+
               className="rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 outline-none focus:border-violet-500"
             >
 
@@ -415,8 +669,9 @@ const availableTags = Array.from(
 
           {loading && (
             <div className="text-zinc-500">
-              Loading your
-              brain...
+
+              Loading your brain...
+
             </div>
           )}
 
@@ -424,7 +679,9 @@ const availableTags = Array.from(
 
           {error && (
             <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-400">
+
               {error}
+
             </div>
           )}
 
@@ -434,17 +691,19 @@ const availableTags = Array.from(
             !error &&
             contents.length ===
               0 && (
-              <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 px-4 py-8 sm:p-12 text-center">
+              <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 px-4 py-8 text-center sm:p-12">
 
                 <h2 className="text-lg font-medium text-zinc-300">
-                  No content
-                  found
+
+                  No content found
+
                 </h2>
 
                 <p className="mt-2 text-sm text-zinc-500">
-                  Try changing
-                  your search or
-                  filters.
+
+                  Try changing your
+                  search or filters.
+
                 </p>
 
               </div>
@@ -455,24 +714,34 @@ const availableTags = Array.from(
           {!loading &&
             contents.length >
               0 && (
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
 
                 {contents.map(
                   (content) => (
+
                     <ContentCard
                       key={
                         content._id
                       }
+
                       content={
                         content
                       }
+
                       onEdit={
                         handleEdit
                       }
+
                       onDelete={
                         handleDelete
                       }
+
+                      onShare={
+                        handleContentShare
+                      }
                     />
+
                   )
                 )}
 
@@ -482,34 +751,36 @@ const availableTags = Array.from(
           {/* Pagination */}
 
           {!loading &&
-            totalPages > 1 && (
+            totalPages >
+              1 && (
+
               <div className="mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
 
                 <button
                   disabled={
                     page === 1
                   }
+
                   onClick={() =>
                     setPage(
-                      (
-                        prev
-                      ) =>
+                      (prev) =>
                         Math.max(
                           1,
-                          prev -
-                            1
+                          prev - 1
                         )
                     )
                   }
+
                   className="rounded-xl border border-zinc-800 px-4 py-2 text-sm text-zinc-300 transition hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   Previous
                 </button>
 
                 <span className="text-sm text-zinc-500">
-                  Page {page}{" "}
-                  of{" "}
+
+                  Page {page} of{" "}
                   {totalPages}
+
                 </span>
 
                 <button
@@ -517,18 +788,17 @@ const availableTags = Array.from(
                     page ===
                     totalPages
                   }
+
                   onClick={() =>
                     setPage(
-                      (
-                        prev
-                      ) =>
+                      (prev) =>
                         Math.min(
                           totalPages,
-                          prev +
-                            1
+                          prev + 1
                         )
                     )
                   }
+
                   className="rounded-xl border border-zinc-800 px-4 py-2 text-sm text-zinc-300 transition hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   Next
@@ -541,31 +811,35 @@ const availableTags = Array.from(
 
       </main>
 
-      {/* Add modal */}
-      
+      {/* Add Content Modal */}
+
       <AddContentModal
         isOpen={
           isAddModalOpen
         }
+
         onClose={() =>
           setIsAddModalOpen(
             false
           )
         }
+
         onCreated={
           fetchContents
         }
       />
 
-      {/* Edit modal */}
+      {/* Edit Modal */}
 
       <EditContentModal
         isOpen={
           isEditOpen
         }
+
         content={
           selectedContent
         }
+
         onClose={() => {
           setIsEditOpen(
             false
@@ -575,36 +849,59 @@ const availableTags = Array.from(
             null
           );
         }}
+
         onUpdated={
           fetchContents
         }
       />
-      <ShareModal
-  isOpen={shareModalOpen}
-  link={shareLink}
-  loading={shareLoading}
-  onClose={() =>
-    setShareModalOpen(false)
-  }
-  onDisable={
-    handleDisableSharing
-  }
-/>
 
-      {/* Delete modal */}
+      {/* Individual Share Modal */}
+
+      <ShareModal
+        isOpen={
+          shareModalOpen
+        }
+
+        link={
+          shareLink
+        }
+
+        loading={
+          shareLoading
+        }
+
+        onClose={() => {
+          setShareModalOpen(
+            false
+          );
+
+          setSharingContent(
+            null
+          );
+        }}
+
+        onDisable={
+          handleDisableContentSharing
+        }
+      />
+
+      {/* Delete Modal */}
 
       <DeleteConfirmModal
         isOpen={
           deleteId !== null
         }
+
         loading={
           deleteLoading
         }
+
         onClose={() =>
           setDeleteId(
             null
           )
         }
+
         onConfirm={
           confirmDelete
         }

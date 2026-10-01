@@ -35,7 +35,7 @@ const SharedContentCard = ({
       </h3>
 
       {content.description && (
-        <p className="mb-5 break-words line-clamp-3 text-sm leading-6 text-zinc-500">
+        <p className="mb-5 line-clamp-3 break-words text-sm leading-6 text-zinc-500">
           {content.description}
         </p>
       )}
@@ -72,4 +72,4 @@ const SharedContentCard = ({
   );
 };
 
-export default SharedContentCard;//helo
+export default SharedContentCard;
