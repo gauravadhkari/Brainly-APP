@@ -1,4 +1,7 @@
+import { useState } from "react";
 import {
+  Menu,
+  X,
   Brain,
   FileText,
   Video,
@@ -27,17 +30,34 @@ const Sidebar = ({
   onTypeChange,
   onTagChange,
 }: Props) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const selectType = (type: string) => {
+    onTypeChange(type);
+    setMenuOpen(false);
+  };
+  const selectTag = (tag: string) => {
+    onTagChange(tag);
+    setMenuOpen(false);
+  };
   const {
     user,
     logout,
   } = useAuth();
 
   return (
-    <aside className="fixed left-0 top-0 flex h-screen w-64 flex-col border-r border-zinc-800 bg-zinc-950 p-4">
+    <>
+      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 py-3 lg:hidden">
+        <div className="flex items-center gap-2 font-semibold"><Brain className="text-violet-400" size={22} /> Cortex</div>
+        <button type="button" aria-expanded={menuOpen} aria-controls="brain-navigation" onClick={() => setMenuOpen(!menuOpen)} className="flex min-h-11 items-center gap-2 rounded-xl border border-zinc-800 px-3 text-sm">
+          {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          {menuOpen ? "Close menu" : "Menu"}
+        </button>
+      </div>
+      <aside id="brain-navigation" aria-label="Workspace navigation" onKeyDown={(event) => { if (event.key === "Escape") setMenuOpen(false); }} className={`${menuOpen ? "flex" : "hidden"} w-full flex-col border-b border-zinc-800 bg-zinc-950 p-4 lg:fixed lg:left-0 lg:top-0 lg:z-30 lg:flex lg:h-dvh lg:w-64 lg:overflow-y-auto lg:border-b-0 lg:border-r`}>
 
       {/* Logo */}
 
-      <div className="mb-8 flex items-center gap-3 px-2">
+      <div className="mb-8 hidden items-center gap-3 px-2 lg:flex">
 
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-500/20">
 
@@ -75,7 +95,7 @@ const Sidebar = ({
             selectedType === ""
           }
           onClick={() =>
-            onTypeChange("")
+            selectType("")
           }
         />
 
@@ -89,7 +109,7 @@ const Sidebar = ({
             "note"
           }
           onClick={() =>
-            onTypeChange(
+            selectType(
               "note"
             )
           }
@@ -105,7 +125,7 @@ const Sidebar = ({
             "youtube"
           }
           onClick={() =>
-            onTypeChange(
+            selectType(
               "youtube"
             )
           }
@@ -121,7 +141,7 @@ const Sidebar = ({
             "article"
           }
           onClick={() =>
-            onTypeChange(
+            selectType(
               "article"
             )
           }
@@ -137,7 +157,7 @@ const Sidebar = ({
             "link"
           }
           onClick={() =>
-            onTypeChange(
+            selectType(
               "link"
             )
           }
@@ -147,13 +167,7 @@ const Sidebar = ({
 
       {/* Tags */}
 
-      <div className="mt-8">
-
-        <p className="mb-3 px-3 text-xs font-medium uppercase tracking-wider text-zinc-600">
-          Tags
-        </p>
-
-        <div className="mt-8">
+      <div className="my-6 min-w-0">
 
   <p className="mb-3 px-3 text-xs font-medium uppercase tracking-wider text-zinc-600">
     Tags
@@ -170,16 +184,11 @@ const Sidebar = ({
         name={tag}
         active={selectedTag === tag}
         onClick={() =>
-          onTagChange(
-            selectedTag === tag
-              ? ""
-              : tag
-          )
+          selectTag(selectedTag === tag ? "" : tag)
         }
       />
     ))
   )}
-</div>
 </div>
 
       {/* User */}
@@ -210,7 +219,8 @@ const Sidebar = ({
 
           <button
             onClick={logout}
-            className="text-zinc-500 transition hover:text-zinc-200"
+            aria-label="Log out"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-zinc-500 transition hover:text-zinc-200"
           >
 
             <LogOut size={17} />
@@ -222,6 +232,7 @@ const Sidebar = ({
       </div>
 
     </aside>
+    </>
   );
 };
 
@@ -283,7 +294,7 @@ const Tag = ({
 
       <Hash size={14} />
 
-      {name}
+      <span className="min-w-0 break-all text-left">{name}</span>
 
     </button>
   );

@@ -41,18 +41,19 @@ const ShareModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4 backdrop-blur-sm">
 
-      <div className="relative w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
+      <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6 shadow-2xl">
 
         <button
           onClick={onClose}
+          aria-label="Close dialog"
           className="absolute right-4 top-4 rounded-lg p-2 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
         >
           <X size={18} />
         </button>
 
-        <div className="mb-6 flex items-start gap-3">
+        <div className="mb-6 flex items-start gap-3 pr-10">
 
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
             <Share2 size={20} />

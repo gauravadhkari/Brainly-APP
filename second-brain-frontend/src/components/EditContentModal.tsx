@@ -109,9 +109,9 @@ const EditContentModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4 backdrop-blur-sm">
 
-      <div className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl">
+      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6 shadow-2xl">
 
         <div className="mb-6 flex items-center justify-between">
 
@@ -127,6 +127,7 @@ const EditContentModal = ({
 
           <button
             onClick={onClose}
+          aria-label="Close dialog"
             className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
           >
             <X size={18} />
@@ -220,11 +221,12 @@ const EditContentModal = ({
             onChange={setTags}
           />
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-3 pt-2 flex-wrap">
 
             <button
               type="button"
               onClick={onClose}
+
               className="rounded-xl border border-zinc-800 px-4 py-2.5 text-sm text-zinc-400 hover:bg-zinc-800"
             >
               Cancel

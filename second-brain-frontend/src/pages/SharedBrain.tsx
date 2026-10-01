@@ -129,7 +129,7 @@ const SharedBrain = () => {
 
       <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-xl">
 
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
 
           <div className="flex items-center gap-3">
 
@@ -166,7 +166,7 @@ const SharedBrain = () => {
 
       {/* Main */}
 
-      <main className="mx-auto max-w-7xl px-6 py-12">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
 
         <div className="mb-10">
 
@@ -174,7 +174,7 @@ const SharedBrain = () => {
             Public collection
           </p>
 
-          <h2 className="text-3xl font-semibold tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             Shared Brain
           </h2>
 
@@ -186,7 +186,7 @@ const SharedBrain = () => {
         </div>
 
         {contents.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 p-12 text-center">
+          <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 px-4 py-8 sm:p-12 text-center">
 
             <Brain
               size={28}

@@ -104,7 +104,7 @@ const Login = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 px-4 text-zinc-100">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 px-4 py-8 text-zinc-100">
 
       {/* Background glow */}
 
@@ -144,7 +144,7 @@ const Login = () => {
 
         {/* Card */}
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 sm:p-8 shadow-2xl backdrop-blur-xl">
 
           <h2 className="text-2xl font-semibold">
             Welcome back

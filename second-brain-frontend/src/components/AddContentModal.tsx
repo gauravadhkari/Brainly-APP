@@ -79,14 +79,15 @@ const AddContentModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 sm:p-4 backdrop-blur-sm">
 
-      <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
+      <div className="relative flex flex-col max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl">
 
         {/* Close button stays fixed */}
 
         <button
           onClick={handleClose}
+          aria-label="Close dialog"
           className="absolute right-4 top-4 z-20 rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
         >
           <X size={18} />
@@ -94,7 +95,7 @@ const AddContentModal = ({
 
         {/* Header */}
 
-        <div className="border-b border-zinc-800 px-6 py-5 pr-16">
+        <div className="border-b border-zinc-800 shrink-0 px-4 py-4 pr-16 sm:px-6 sm:py-5 sm:pr-16">
 
           <h2 className="text-xl font-semibold text-zinc-100">
             Add Content
@@ -108,7 +109,7 @@ const AddContentModal = ({
 
         {/* Scrollable body */}
 
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+        <div className="min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
 
           {error && (
             <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
@@ -216,11 +217,12 @@ const AddContentModal = ({
 
             {/* Buttons */}
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-3 pt-2 flex-wrap">
 
               <button
                 type="button"
                 onClick={handleClose}
+
                 className="rounded-xl border border-zinc-800 px-4 py-2.5 text-sm text-zinc-400 transition hover:bg-zinc-800"
               >
                 Cancel

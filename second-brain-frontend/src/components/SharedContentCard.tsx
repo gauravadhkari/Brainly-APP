@@ -15,7 +15,7 @@ const SharedContentCard = ({
   content,
 }: Props) => {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 transition hover:border-zinc-700 hover:bg-zinc-900">
+    <div className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 transition hover:border-zinc-700 hover:bg-zinc-900">
 
       <div className="mb-5 flex items-center justify-between">
 
@@ -30,12 +30,12 @@ const SharedContentCard = ({
 
       </div>
 
-      <h3 className="mb-2 font-medium leading-6 text-zinc-100">
+      <h3 className="mb-2 break-words font-medium leading-6 text-zinc-100">
         {content.title}
       </h3>
 
       {content.description && (
-        <p className="mb-5 line-clamp-3 text-sm leading-6 text-zinc-500">
+        <p className="mb-5 break-words line-clamp-3 text-sm leading-6 text-zinc-500">
           {content.description}
         </p>
       )}
@@ -59,7 +59,7 @@ const SharedContentCard = ({
           (tag) => (
             <span
               key={tag}
-              className="rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-400"
+              className="max-w-full break-all rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-400"
             >
               #{tag}
             </span>

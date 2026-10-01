@@ -36,7 +36,7 @@ const ContentCard = ({
   ] = useState(false);
 
   return (
-    <div className="group relative rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 transition duration-300 hover:-translate-y-1 hover:border-zinc-700 hover:bg-zinc-900">
+    <div className="group relative min-w-0 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 transition duration-300 hover:-translate-y-1 hover:border-zinc-700 hover:bg-zinc-900">
 
       <div className="mb-5 flex items-center justify-between">
 
@@ -49,12 +49,14 @@ const ContentCard = ({
         <div className="relative">
 
           <button
+            aria-label="Content actions"
+            aria-expanded={menuOpen}
             onClick={() =>
               setMenuOpen(
                 !menuOpen
               )
             }
-            className="rounded-lg p-1.5 text-zinc-600 transition hover:bg-zinc-800 hover:text-zinc-300"
+            className="min-h-11 min-w-11 rounded-lg p-2.5 text-zinc-600 transition hover:bg-zinc-800 hover:text-zinc-300"
           >
             <MoreHorizontal
               size={18}
@@ -109,12 +111,12 @@ const ContentCard = ({
 
       </div>
 
-      <h3 className="mb-2 font-medium leading-6 text-zinc-100">
+      <h3 className="mb-2 break-words font-medium leading-6 text-zinc-100">
         {content.title}
       </h3>
 
       {content.description && (
-        <p className="mb-5 line-clamp-2 text-sm leading-6 text-zinc-500">
+        <p className="mb-5 break-words line-clamp-2 text-sm leading-6 text-zinc-500">
           {content.description}
         </p>
       )}
@@ -140,7 +142,7 @@ const ContentCard = ({
           (tag) => (
             <span
               key={tag}
-              className="rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-400"
+              className="max-w-full break-all rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-400"
             >
               #{tag}
             </span>

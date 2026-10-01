@@ -21,3 +21,16 @@ body {
 * {
   box-sizing: border-box;
 }
+/* Keep long saved content inside its card and avoid mobile input zoom. */
+button, a, input, select, textarea { touch-action: manipulation; }
+button:focus-visible, a:focus-visible { outline: 2px solid #a78bfa; outline-offset: 3px; }
+@media (max-width: 639px) {
+  input, select, textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+@media (pointer: coarse) {
+  button { min-height: 44px; }
+}

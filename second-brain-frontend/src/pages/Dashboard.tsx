@@ -317,7 +317,7 @@ const availableTags = Array.from(
   }}
       />
 
-      <main className="ml-64 min-h-screen">
+      <main className="min-w-0 min-h-dvh lg:ml-64">
 
         {/* Topbar */}
 
@@ -333,7 +333,7 @@ const availableTags = Array.from(
   onShare={handleShare}
 />
 
-        <section className="p-8">
+        <section className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
 
           {/* Heading */}
 
@@ -343,7 +343,7 @@ const availableTags = Array.from(
               Workspace
             </p>
 
-            <h1 className="text-3xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
               My Second Brain
             </h1>
 
@@ -357,7 +357,7 @@ const availableTags = Array.from(
 
           {/* Controls */}
 
-          <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-500">
 
@@ -366,14 +366,14 @@ const availableTags = Array.from(
               </span>
 
               {selectedType && (
-                <span className="rounded-lg bg-zinc-900 px-3 py-1.5">
+                <span className="max-w-full break-all rounded-lg bg-zinc-900 px-3 py-1.5">
                   Type:{" "}
                   {selectedType}
                 </span>
               )}
 
               {selectedTag && (
-                <span className="rounded-lg bg-violet-500/10 px-3 py-1.5 text-violet-400">
+                <span className="max-w-full break-all rounded-lg bg-violet-500/10 px-3 py-1.5 text-violet-400">
                   #
                   {selectedTag}
                 </span>
@@ -384,6 +384,7 @@ const availableTags = Array.from(
             {/* Sorting */}
 
             <select
+              aria-label="Sort content"
               value={sort}
               onChange={(e) => {
                 setSort(
@@ -433,7 +434,7 @@ const availableTags = Array.from(
             !error &&
             contents.length ===
               0 && (
-              <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 p-12 text-center">
+              <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 px-4 py-8 sm:p-12 text-center">
 
                 <h2 className="text-lg font-medium text-zinc-300">
                   No content
@@ -454,7 +455,7 @@ const availableTags = Array.from(
           {!loading &&
             contents.length >
               0 && (
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
 
                 {contents.map(
                   (content) => (
@@ -482,7 +483,7 @@ const availableTags = Array.from(
 
           {!loading &&
             totalPages > 1 && (
-              <div className="mt-8 flex items-center justify-center gap-3">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
 
                 <button
                   disabled={
